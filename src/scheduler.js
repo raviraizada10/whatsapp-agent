@@ -113,7 +113,7 @@ function initScheduler(sock) {
     setInterval(syncJobs, 60 * 1000);
 
     // Start the webhook server, sharing the activeJobs reference
-    startWebhookServer(activeJobs, sock);
+    // startWebhookServer is now called immediately in index.js
 }
 
-module.exports = { initScheduler };
+module.exports = { initScheduler, activeJobs };
