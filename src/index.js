@@ -25,6 +25,8 @@ async function connectToWhatsApp() {
         if (qr) {
             console.log('\n📲 QR Code received! Please scan with your WhatsApp.\n');
             qrcode.generate(qr, { small: true });
+            console.log('\n🔗 IF THE TERMINAL QR CODE IS DISTORTED, CLICK OR COPY THIS LINK TO YOUR BROWSER TO SCAN A CLEAR ONE:');
+            console.log(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qr)}\n`);
         }
 
         if(connection === 'close') {
