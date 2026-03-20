@@ -71,20 +71,31 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex h-screen w-full bg-[#020617] text-slate-100 overflow-hidden font-sans">
-      <aside className="w-72 flex flex-col pt-8 pb-4 px-4 bg-white/5 border-r border-white/10 backdrop-blur-xl relative z-20">
-        <div className="flex items-center gap-3 px-2 mb-12">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
+    <div className="flex flex-col md:flex-row h-screen w-full bg-[#020617] text-slate-100 overflow-hidden font-sans">
+      <aside className="w-full md:w-72 flex-none flex flex-col pt-4 md:pt-8 pb-2 md:pb-4 px-4 bg-white/5 border-b md:border-b-0 md:border-r border-white/10 backdrop-blur-xl relative z-20">
+        <div className="flex items-center gap-3 px-2 mb-4 md:mb-12">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20 flex-shrink-0">
             <MessageSquare className="text-white w-5 h-5" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Agent<span className="text-emerald-400">Flow</span></h1>
+          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+             Agent<span className="text-emerald-400">Flow</span>
+             <div className="md:hidden flex items-center ml-1">
+               {connectionStatus === 'connected' ? (
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+               ) : connectionStatus === 'pairing' && qrCode ? (
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
+               ) : (
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-500" />
+               )}
+             </div>
+          </h1>
         </div>
-        <nav className="flex flex-col gap-2 flex-1">
+        <nav className="flex md:flex-col gap-2 overflow-x-auto overflow-y-hidden pb-1 md:pb-0 shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-sm font-medium ${
+              className={`relative flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-xl transition-all duration-300 text-sm font-medium whitespace-nowrap shrink-0 ${
                 activeTab === item.id 
                   ? 'text-white' 
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -110,7 +121,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Connection Status Widget */}
-        <div className="mt-auto pt-6 border-t border-white/10 flex flex-col gap-2">
+        <div className="hidden md:flex mt-auto pt-6 border-t border-white/10 flex-col gap-2">
            {connectionStatus === 'connected' ? (
               <div className="flex items-center gap-3 text-emerald-400 text-sm font-medium px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-lg shadow-emerald-500/10">
                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
@@ -139,7 +150,7 @@ export default function Dashboard() {
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-        <div className="p-10 relative z-10 h-full max-w-6xl mx-auto">
+         <div className="md:p-10 p-4 relative z-10 h-full max-w-6xl mx-auto pb-24 md:pb-10">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
