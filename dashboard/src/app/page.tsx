@@ -13,16 +13,25 @@ export default function Dashboard() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [adminNotifications, setAdminNotifications] = useState(true);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<string>('disconnected');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-    // Poll for background AI queue updates every 15 seconds
+    // Poll for background AI queue updates & QR connections every 10 seconds
     const pollQueue = async () => {
-      const { count } = await supabase.from('delivery_queue').select('*', { count: 'exact', head: true }).eq('status', 'draft');
-      if (count !== null) setPendingApprovals(count);
+      const [qRes, setRes] = await Promise.all([
+        supabase.from('delivery_queue').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
+        supabase.from('settings').select('qr_code, connection_status').eq('id', 1).single()
+      ]);
+      if (qRes.count !== null) setPendingApprovals(qRes.count);
+      if (setRes.data) {
+        setQrCode(setRes.data.qr_code);
+        setConnectionStatus(setRes.data.connection_status);
+      }
     };
-    const timer = setInterval(pollQueue, 15000);
+    const timer = setInterval(pollQueue, 10000);
     return () => clearInterval(timer);
   }, []);
 
@@ -36,7 +45,11 @@ export default function Dashboard() {
     ]);
     if (cRes.data) setContacts(cRes.data);
     if (sRes.data) setSchedules(sRes.data);
-    if (setRes.data) setAdminNotifications(setRes.data.admin_notifications);
+    if (setRes.data) {
+      setAdminNotifications(setRes.data.admin_notifications);
+      setQrCode(setRes.data.qr_code);
+      setConnectionStatus(setRes.data.connection_status);
+    }
     if (qRes.count !== null) setPendingApprovals(qRes.count);
     setLoading(false);
   }
@@ -95,6 +108,31 @@ export default function Dashboard() {
             </button>
           ))}
         </nav>
+
+        {/* Connection Status Widget */}
+        <div className="mt-auto pt-6 border-t border-white/10 flex flex-col gap-2">
+           {connectionStatus === 'connected' ? (
+              <div className="flex items-center gap-3 text-emerald-400 text-sm font-medium px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-lg shadow-emerald-500/10">
+                 <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                 <span>Backend Connected</span>
+              </div>
+           ) : connectionStatus === 'pairing' && qrCode ? (
+              <div className="flex flex-col gap-3 text-xs text-slate-300 bg-white/5 border border-white/10 p-4 rounded-xl">
+                 <div className="flex items-center gap-2 text-amber-400 font-medium">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                    <span>Scan to Connect</span>
+                 </div>
+                 <div className="bg-white p-2 rounded-xl shadow-lg">
+                   <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`} alt="WhatsApp QR" className="w-full h-auto rounded-lg" />
+                 </div>
+              </div>
+           ) : (
+              <div className="flex items-center gap-3 text-slate-400 text-sm font-medium px-4 py-3 bg-white/5 border border-white/10 rounded-xl">
+                 <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
+                 <span>Backend Offline</span>
+              </div>
+           )}
+        </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto relative z-10">

@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS schedules (
 -- 3. Global Agent Settings 
 CREATE TABLE IF NOT EXISTS settings (
   id integer primary key default 1,
-  admin_notifications boolean default true
+  admin_notifications boolean default true,
+  qr_code TEXT,
+  connection_status TEXT DEFAULT 'disconnected'
 );
 
 -- Initialize the settings singleton row
