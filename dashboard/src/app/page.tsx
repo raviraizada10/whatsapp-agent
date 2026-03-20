@@ -121,7 +121,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Connection Status Widget */}
-        <div className="hidden md:flex mt-auto pt-6 border-t border-white/10 flex-col gap-2">
+        <div className="flex mt-auto pt-6 border-t border-white/10 flex-col gap-2">
            {connectionStatus === 'connected' ? (
               <div className="flex items-center gap-3 text-emerald-400 text-sm font-medium px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-lg shadow-emerald-500/10">
                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
