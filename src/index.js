@@ -98,6 +98,23 @@ async function connectToWhatsApp() {
             }
         }
     });
+
 }
 
-connectToWhatsApp();
+async function startApp() {
+    console.log('🧹 Wiping stale connection states from Dashboard DB...');
+    await supabase.from('settings').update({ connection_status: 'disconnected', qr_code: null }).eq('id', 1).catch(()=>{});
+    connectToWhatsApp();
+}
+
+// Graceful connection cleanup on container recycle
+async function cleanupAndExit() {
+    console.log('\n🛑 Render is shutting down the container. Wiping Dashboard QR state...');
+    await supabase.from('settings').update({ connection_status: 'disconnected', qr_code: null }).eq('id', 1).catch(()=>{});
+    process.exit(0);
+}
+
+process.on('SIGINT', cleanupAndExit);
+process.on('SIGTERM', cleanupAndExit);
+
+startApp();
