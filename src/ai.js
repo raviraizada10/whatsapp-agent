@@ -100,9 +100,9 @@ async function generateMessage(recipientName, constraint, personaContext = null)
         const result = await model.generateContent(prompt);
         return result.response.text().trim();
     } catch (error) {
-        console.error('Error generating AI message:', error);
-        // Return constraint as fallback to keep things moving
-        return constraint;
+        console.error('Error generating AI message:', error.message);
+        // Return null instead of prompt so we don't spam the user with "Find the Live ETA..."
+        return null;
     }
 }
 

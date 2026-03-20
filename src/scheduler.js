@@ -4,16 +4,27 @@ const { generateMessage } = require('./ai');
 const { startWebhookServer } = require('./webhook');
 
 const activeJobs = {}; // Tracks { job_instance, cron, prompt } // Store running jobs to allow pausing/canceling
+let currentSock = null;
+let isInitialized = false;
 
 /**
  * Initializes the background cron jobs
  * @param {object} sock - The Baileys WhatsApp socket
  */
 function initScheduler(sock) {
+    currentSock = sock;
+    
+    if (isInitialized) {
+        console.log('⏰ Scheduler already running. Socket reference updated.');
+        return;
+    }
+    
     if (!supabase) {
         console.error('❌ Cannot initialize scheduler: Supabase client is missing.');
         return;
     }
+    
+    isInitialized = true;
     console.log('⏰ Initializing periodic scheduler module...');
     
     setInterval(async () => {
@@ -87,14 +98,18 @@ function initScheduler(sock) {
                         }
                     } else {
                         // Normal mode: send immediately
-                        const jid = `${s.contact_number}@s.whatsapp.net`;
-                        await sock.sendMessage(jid, { text: msgText });
+                    const jid = `${s.contact_number}@s.whatsapp.net`;
+                    if (currentSock) {
+                        await currentSock.sendMessage(jid, { text: msgText });
                         console.log(`📩 AI message successfully sent to ${s.recipient_name}!`);
+                    } else {
+                        console.error('❌ Cannot send message: currentSock is null');
                     }
-                } catch (e) {
-                     console.error(`❌ Failed to execute AI job for ${s.recipient_name}`, e);
                 }
-            };
+            } catch (e) {
+                 console.error(`❌ Failed to execute AI job for ${s.recipient_name}`, e.message);
+            }
+        };
 
             // Create or recreate the job
             const jobInstance = schedule.scheduleJob(s.time_cron, asyncCallback);
