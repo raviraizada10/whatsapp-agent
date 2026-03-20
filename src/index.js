@@ -3,9 +3,13 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLat
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const { supabase } = require('./db');
-const { initScheduler } = require('./scheduler');
+const { initScheduler, activeJobs } = require('./scheduler');
+const { startWebhookServer, setWebhookGlobals } = require('./webhook');
 
 const ADMIN_NUMBER = process.env.ADMIN_NUMBER; // Format: 'COUNTRYCODE_NUMBER' (e.g. '1234567890')
+
+// START WEBHOOK SERVER IMMEDIATELY TO SATISFY RENDER PORT BINDING RULE
+startWebhookServer();
 
 async function connectToWhatsApp() {
     console.log('🔌 Initializing WhatsApp connection...');
@@ -39,7 +43,7 @@ async function connectToWhatsApp() {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('⚠️ Connection closed. Reconnecting:', shouldReconnect);
             
-            supabase.from('settings').update({ connection_status: 'disconnected' }).eq('id', 1).catch(()=>{});
+            supabase.from('settings').update({ connection_status: 'disconnected' }).eq('id', 1).then(()=>{}).catch(()=>{});
 
             if (lastDisconnect?.error) {
                 console.error('Disconnect Reason:', lastDisconnect.error.message || lastDisconnect.error);
@@ -52,10 +56,12 @@ async function connectToWhatsApp() {
         } else if(connection === 'open') {
             console.log('✅ Connected to WhatsApp successfully!');
             
-            supabase.from('settings').update({ connection_status: 'connected', qr_code: null }).eq('id', 1).catch(()=>{});
+            supabase.from('settings').update({ connection_status: 'connected', qr_code: null }).eq('id', 1).then(()=>{}).catch(()=>{});
 
             // Start the cron scheduler now that WhatsApp is ready
             initScheduler(sock);
+            // Provide the webhooks the live sockets to broadcast messages
+            setWebhookGlobals(activeJobs, sock);
         }
     });
 
