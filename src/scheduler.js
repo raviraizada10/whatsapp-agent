@@ -10,6 +10,10 @@ const activeJobs = {}; // Tracks { job_instance, cron, prompt } // Store running
  * @param {object} sock - The Baileys WhatsApp socket
  */
 function initScheduler(sock) {
+    if (!supabase) {
+        console.error('❌ Cannot initialize scheduler: Supabase client is missing.');
+        return;
+    }
     console.log('⏰ Initializing periodic scheduler module...');
     
     setInterval(async () => {

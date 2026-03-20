@@ -9,7 +9,22 @@ const { startWebhookServer, setWebhookGlobals } = require('./webhook');
 const ADMIN_NUMBER = process.env.ADMIN_NUMBER; // Format: 'COUNTRYCODE_NUMBER' (e.g. '1234567890')
 
 // START WEBHOOK SERVER IMMEDIATELY TO SATISFY RENDER PORT BINDING RULE
-startWebhookServer();
+try {
+    startWebhookServer();
+} catch (e) {
+    console.error('❌ Failed to start Webhook server:', e.message);
+}
+
+// Global Exception Handlers for Production Stability
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('🚨 Uncaught Exception:', err);
+    // In production, we might want to exit and let Render restart us
+    if (err.message.includes('EADDRINUSE')) process.exit(1);
+});
 
 async function connectToWhatsApp() {
     console.log('🔌 Initializing WhatsApp connection...');
@@ -102,15 +117,21 @@ async function connectToWhatsApp() {
 }
 
 async function startApp() {
-    console.log('🧹 Wiping stale connection states from Dashboard DB...');
-    await supabase.from('settings').update({ connection_status: 'disconnected', qr_code: null }).eq('id', 1).catch(()=>{});
-    connectToWhatsApp();
+    try {
+        console.log('🧹 Wiping stale connection states from Dashboard DB...');
+        await supabase.from('settings').update({ connection_status: 'disconnected', qr_code: null }).eq('id', 1);
+        await connectToWhatsApp();
+    } catch (e) {
+        console.error('❌ Critical startup error:', e.message);
+        // Fallback to connection attempt anyway
+        connectToWhatsApp().catch(()=>{});
+    }
 }
 
 // Graceful connection cleanup on container recycle
 async function cleanupAndExit() {
     console.log('\n🛑 Render is shutting down the container. Wiping Dashboard QR state...');
-    await supabase.from('settings').update({ connection_status: 'disconnected', qr_code: null }).eq('id', 1).catch(()=>{});
+    await supabase.from('settings').update({ connection_status: 'disconnected', qr_code: null }).eq('id', 1);
     process.exit(0);
 }
 

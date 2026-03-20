@@ -1,3 +1,4 @@
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { supabase } = require('./db');
 const { generateMessage } = require('./ai');
 
@@ -64,7 +65,6 @@ async function generateContextualReply(contactPhone, contactName, incomingMessag
     prompt += `\n\nThe contact just said: "${incomingMessage}"`;
     prompt += `\n\nWrite a natural, concise reply. Only output the raw reply text, no quotes or explanations.`;
 
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemma-3-27b-it' });
 
