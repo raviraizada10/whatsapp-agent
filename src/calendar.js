@@ -5,11 +5,20 @@ const { format, isToday, isTomorrow } = require('date-fns');
  * Initialize Google Calendar API client using Service Account credentials from .env
  */
 function getCalendarClient() {
+    // 1. Best Practice for Secret Files (e.g. Render Secret Files)
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        const auth = new google.auth.GoogleAuth({
+            scopes: ['https://www.googleapis.com/auth/calendar.readonly']
+        });
+        return google.calendar({ version: 'v3', auth });
+    }
+
+    // 2. Fallback for raw environment variables string
     const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
     const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!clientEmail || !privateKey) {
-        console.warn('⚠️ Google Calendar credentials missing in .env');
+        console.warn('⚠️ Google Calendar credentials missing in environment.');
         return null;
     }
 
