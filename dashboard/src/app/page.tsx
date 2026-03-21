@@ -168,6 +168,16 @@ export default function Dashboard() {
                  {sidebarOpen && <span>Backend Offline</span>}
               </div>
            )}
+           {/* Theme Toggle */}
+           <button
+             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+             className={`flex items-center ${sidebarOpen ? 'gap-3 px-4' : 'justify-center'} py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-200/60 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400`}
+           >
+             {mounted && (theme === 'dark' ? <Sun className="w-5 h-5 flex-shrink-0" /> : <Moon className="w-5 h-5 flex-shrink-0" />)}
+             {sidebarOpen && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
+           </button>
+
            {/* Logout Button */}
            <form action="/api/auth" method="POST" className={`flex items-center ${sidebarOpen ? 'px-4' : 'justify-center'} w-full`}>
              <input type="hidden" name="action" value="logout" />
@@ -195,18 +205,7 @@ export default function Dashboard() {
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-        {/* Floating Theme Toggle */}
-        <div className="absolute top-6 right-6 md:top-8 md:right-8 z-50">
-          {mounted && (
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              title="Toggle theme"
-              className="flex items-center justify-center w-11 h-11 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shadow-md"
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-          )}
-        </div>
+        {/* Main Content Area */}
 
          <div className="md:p-10 p-4 relative z-10 h-full max-w-6xl mx-auto pb-24 md:pb-10">
           {loading ? (
@@ -660,31 +659,40 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
                       </div>
                     </div>
                   ) : (
-                    <div className="p-6">
-                      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4 relative z-10">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Clock className="w-4 h-4 text-emerald-500" />
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                    <div className="p-5 flex flex-col h-full">
+                      {/* Card Header: Actions + Status */}
+                      <div className="flex justify-between items-start mb-4 gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
                               {(() => { try { return cronstrue.toString(s.time_cron); } catch { return 'Custom Schedule'; }})()}
                             </h3>
-                            {!s.is_active && <span className="text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded tracking-widest uppercase">PAUSED</span>}
+                            {!s.is_active && (
+                              <span className="text-[10px] font-black bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded tracking-tighter uppercase">PAUSED</span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
-                             <code className="text-[11px] font-mono bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400">
+                             <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-widest">Cron</span>
+                             <code className="text-xs font-mono bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300">
                                {s.time_cron}
                              </code>
                           </div>
                         </div>
-                        <div className="flex gap-2 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => toggleStatus(s.id, s.is_active)} className={`px-4 py-1.5 rounded-xl border transition text-xs font-bold uppercase tracking-wider ${s.is_active ? 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-amber-500/10 text-slate-500 dark:text-slate-300 hover:text-amber-500' : 'bg-emerald-500 text-white border-emerald-600'}`}>{s.is_active ? 'Pause' : 'Resume'}</button>
-                          <button onClick={() => startEdit(s)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-blue-500/20 text-slate-500 dark:text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(s.id)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-red-500/20 text-slate-500 dark:text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                        <div className="flex gap-1.5 shrink-0">
+                          <button onClick={() => toggleStatus(s.id, s.is_active)} className={`px-3 py-1.5 rounded-lg border transition text-[10px] font-bold uppercase tracking-wider ${s.is_active ? 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-amber-500/10 text-slate-500 dark:text-slate-300 hover:text-amber-500' : 'bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20'}`}>{s.is_active ? 'Pause' : 'Resume'}</button>
+                          <button onClick={() => startEdit(s)} className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-blue-500/20 text-slate-500 dark:text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-red-500/20 text-slate-500 dark:text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </div>
-                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 relative z-10 group/prompt">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">AI Constraint Prompt</p>
-                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed italic border-l-2 border-emerald-500/50 pl-3 text-sm">"{s.constraint_prompt}"</p>
+
+                      {/* Prompt Box */}
+                      <div className="mt-auto p-4 rounded-xl bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 relative group/prompt">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">AI Logic</p>
+                          <Sparkles className="w-3 h-3 text-emerald-500/30 group-hover/prompt:text-emerald-500/60 transition-colors" />
+                        </div>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed italic border-l-2 border-emerald-500/30 pl-3 text-[13px] line-clamp-3 group-hover/prompt:line-clamp-none transition-all duration-300">"{s.constraint_prompt}"</p>
                       </div>
                     </div>
                   )}
