@@ -75,6 +75,10 @@ function initScheduler(sock) {
 
             // Isolate execution logic so it can be invoked manually or by cron
             const asyncCallback = async () => {
+                if (s.contact_number === 'Unknown Phone') {
+                    console.error(`⚠️ Cannot execute schedule for ID: ${s.id}. No linked contact found (Unknown Phone). Please re-link via Dashboard.`);
+                    return;
+                }
                 console.log(`⚡ Executing schedule for ${s.recipient_name}...`);
                 try {
                     const { getContactPersona } = require('./db');
@@ -90,8 +94,7 @@ function initScheduler(sock) {
                         // Approval mode: write to queue, don't send yet
                         const { error: insertErr } = await supabase.from('delivery_queue').insert([{
                             schedule_id: s.id,
-                            recipient_name: s.recipient_name,
-                            contact_number: s.contact_number,
+                            contact_id: s.contact_id,
                             message_text: msgText,
                             status: 'draft'
                         }]);

@@ -69,7 +69,13 @@ function startWebhookServer() {
         try {
             const { data } = await supabase
                 .from('delivery_queue')
-                .select('*')
+                .select(`
+                    *,
+                    contacts (
+                        name,
+                        phone
+                    )
+                `)
                 .eq('status', 'approved')
                 .order('created_at', { ascending: false });
 
@@ -99,12 +105,22 @@ function startWebhookServer() {
                     // 3. Send the latest valid message
                     try {
                         seenSchedules.add(item.schedule_id);
-                        const jid = `${item.contact_number}@s.whatsapp.net`;
+                        
+                        const recipientPhone = item.contacts?.phone;
+                        const recipientName = item.contacts?.name || 'Unknown Contact';
+
+                        if (!recipientPhone) {
+                            console.error(`❌ Cannot send approved message for ID: ${item.id}. Linked contact missing.`);
+                            await supabase.from('delivery_queue').update({ status: 'error' }).eq('id', item.id);
+                            continue;
+                        }
+
+                        const jid = `${recipientPhone}@s.whatsapp.net`;
                         await globalSock.sendMessage(jid, { text: item.message_text });
                         await supabase.from('delivery_queue').update({ status: 'sent' }).eq('id', item.id);
-                        console.log(`✅ Approved (Latest) message sent to ${item.recipient_name} (${item.contact_number})`);
+                        console.log(`✅ Approved (Latest) message sent to ${recipientName} (${recipientPhone})`);
                     } catch (sendErr) {
-                        console.error(`❌ Failed to send approved message to ${item.recipient_name}:`, sendErr.message);
+                        console.error(`❌ Failed to send approved message for ID: ${item.id}:`, sendErr.message);
                     }
                 }
             }
