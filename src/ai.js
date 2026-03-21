@@ -51,13 +51,7 @@ Begin!
             const responseText = result.response.text().trim();
             console.log(`\n--- AGENT THOUGHT ---\n${responseText}\n--------------------\n`);
 
-            // 1. Check for FINAL RESPONSE
-            if (responseText.includes('FINAL RESPONSE:')) {
-                const finalMsg = responseText.split('FINAL RESPONSE:').pop().trim();
-                return finalMsg || "Sorry, I couldn't generate a clear response.";
-            }
-
-            // 2. Parse ACTION
+            // 1. Parse ACTION (Priority)
             const actionMatch = responseText.match(/ACTION:\s*([a-zA-Z_]+)\((.*)\)/);
             if (actionMatch) {
                 const toolName = actionMatch[1];
@@ -79,6 +73,12 @@ Begin!
                 history.push({ role: 'model', parts: [{ text: responseText }] });
                 history.push({ role: 'user', parts: [{ text: `OBSERVATION: ${observation}` }] });
                 continue;
+            }
+
+            // 2. Check for FINAL RESPONSE
+            if (responseText.includes('FINAL RESPONSE:')) {
+                const finalMsg = responseText.split('FINAL RESPONSE:').pop().trim();
+                return finalMsg || "Sorry, I couldn't generate a clear response.";
             }
 
             // Fallback: If no action or final response, just return the text
