@@ -159,16 +159,23 @@ async function connectToWhatsApp() {
             // Save incoming message to chat history
             await saveMessage(contactPhone, 'user', text);
 
-            // HANDLE AGENT COMMANDS (/agent ...)
-            if (text.toLowerCase().startsWith('/agent')) {
-                const constraint = text.substring(7).trim(); // Remove "/agent "
+            // HANDLE AGENT COMMANDS (Jarvis, /agent, etc.)
+            const isJarvis = text.toLowerCase().startsWith('jarvis');
+            const isAgent = text.toLowerCase().startsWith('/agent');
+
+            if (isJarvis || isAgent) {
+                // Extract constraints (remove "Jarvis," or "Jarvis " or "/agent ")
+                let constraint = text;
+                if (isJarvis) constraint = text.substring(6).replace(/^[,:\s]+/, '').trim();
+                else if (isAgent) constraint = text.substring(7).trim();
+
                 const persona = await getContactPersona(contactPhone);
                 
-                // Trigger the Agentic "Brain"
-                const agentReply = await generateMessage('Admin', constraint || 'How can I help?', persona);
+                // Trigger the Agentic "Brain" (now with 'Jarvis' identity)
+                const agentReply = await generateMessage('Admin', constraint || 'How can I help, sir?', persona);
                 
                 if (agentReply) {
-                    await sock.sendMessage(sender, { text: `🤖 *Agent:* ${agentReply}` });
+                    await sock.sendMessage(sender, { text: `🤵 *Jarvis:* ${agentReply}` });
                     await saveMessage(contactPhone, 'agent', agentReply);
                 }
                 return;
