@@ -579,7 +579,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
             </h3>
 
             {/* Group Cards */}
-            <div className="grid gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {userSchedules.map(s => (
                 <div key={s.id} className={`relative overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 group ${s.is_active ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-black/20 border-white/5 opacity-50'}`}>
                   
