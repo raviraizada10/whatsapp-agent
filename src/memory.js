@@ -1,4 +1,3 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { supabase } = require('./db');
 const { generateMessage } = require('./ai');
 
@@ -53,7 +52,7 @@ async function generateContextualReply(contactPhone, contactName, incomingMessag
     const conversationHistory = await getConversationContext(contactPhone);
 
     let prompt = `You are a personal AI assistant replying to a WhatsApp message on behalf of the user.`;
-    
+
     if (personaContext) {
         prompt += `\nContext about this contact: ${personaContext}`;
     }
@@ -61,10 +60,30 @@ async function generateContextualReply(contactPhone, contactName, incomingMessag
     if (conversationHistory) {
         prompt += `\n\nPrevious conversation:\n${conversationHistory}`;
     }
+    const safeMessage = incomingMessage ? incomingMessage.toString().toLowerCase() : "";
+    const isCalendarQuery = safeMessage.match(/\b(schedule|calendar|meetings|appointments|events|today|tomorrow)\b/);
+    if (isCalendarQuery) {
+        // Assume ONLY the admin should be able to query the personal calendar
+        const ADMIN_NUMBER = process.env.ADMIN_NUMBER;
+        if (contactPhone === ADMIN_NUMBER) {
+            const { getUpcomingEvents, formatEventsForContext } = require('./calendar');
+            console.log(`📅 Admin Calendar Query Detected.`);
+            const now = new Date();
+            const eod = new Date();
+            eod.setDate(now.getDate() + 1); // Look ahead roughly 48 hours for general queries
+            eod.setHours(23, 59, 59, 999);
+            const events = await getUpcomingEvents(now, eod, 20);
+            if (events) {
+                const formattedEvents = formatEventsForContext(events);
+                prompt += `\n\nREAL-TIME CALENDAR DATA (Use this to precisely answer the user's question about their schedule):\n${formattedEvents}`;
+            }
+        }
+    }
 
     prompt += `\n\nThe contact just said: "${incomingMessage}"`;
     prompt += `\n\nWrite a natural, concise reply. Only output the raw reply text, no quotes or explanations.`;
 
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemma-3-27b-it' });
 

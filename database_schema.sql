@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS settings (
   id integer primary key default 1,
   admin_notifications boolean default true,
   qr_code TEXT,
-  connection_status TEXT DEFAULT 'disconnected'
+  connection_status TEXT DEFAULT 'disconnected',
+  last_heartbeat TIMESTAMP WITH TIME ZONE
 );
 
 -- Initialize the settings singleton row
@@ -65,4 +66,11 @@ CREATE TABLE IF NOT EXISTS manual_triggers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   schedule_id UUID REFERENCES schedules(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 7. WhatsApp Auth Session (For persistent login across restarts)
+CREATE TABLE IF NOT EXISTS auth_session (
+  id TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

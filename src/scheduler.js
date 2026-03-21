@@ -81,6 +81,11 @@ function initScheduler(sock) {
                     const persona = await getContactPersona(s.contact_number);
                     const msgText = await generateMessage(s.recipient_name, s.constraint_prompt, persona);
 
+                    if (!msgText) {
+                        console.error(`❌ AI generation failed for ${s.recipient_name}. Skipping send.`);
+                        return;
+                    }
+
                     if (s.requires_approval) {
                         // Approval mode: write to queue, don't send yet
                         const { error: insertErr } = await supabase.from('delivery_queue').insert([{

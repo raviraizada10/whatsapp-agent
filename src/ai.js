@@ -39,8 +39,6 @@ async function getLiveWebContext(query) {
 async function generateMessage(recipientName, constraint, personaContext = null) {
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        // Gemma 3 variants often do NOT support the systemInstruction / developer_instruction parameter.
-        // We avoid the 400 error by baking instructions directly into the main prompt.
         const model = genAI.getGenerativeModel({ model: 'gemma-3-27b-it' });
         
         let prompt = `SYSTEM RULES:\nYou are a highly emotionally intelligent, human-like personal assistant.\nYou must generate EXACTLY ONE WhatsApp message.\nThe message is being sent on behalf of the USER to the CONTACT.\nYou MUST NOT include any conversational filler like 'Here is the message:' or quotes.\nJust write the raw text the user will send.\n\n`;
@@ -50,7 +48,7 @@ async function generateMessage(recipientName, constraint, personaContext = null)
         }
 
         // Trigger live search for specific keywords requesting real-time data
-        const lowerConstraint = constraint.toLowerCase();
+        const lowerConstraint = constraint ? constraint.toString().toLowerCase() : "";
         
         let liveData = null;
         
@@ -90,6 +88,22 @@ async function generateMessage(recipientName, constraint, personaContext = null)
         if (!liveData && requiresLiveSearch) {
             liveData = await getLiveWebContext(constraint);
         }
+
+        // 3. Calendar Check
+        const requiresCalendar = lowerConstraint.match(/\b(schedule|calendar|meetings|appointments|events)\b/);
+        if (requiresCalendar && !liveData) {
+            const { getUpcomingEvents, formatEventsForContext } = require('./calendar');
+            console.log(`📅 Calendar Check Triggered by constraint.`);
+            const now = new Date();
+            const eod = new Date();
+            eod.setHours(23, 59, 59, 999);
+            // Default to today's events if they ask for schedule
+            const events = await getUpcomingEvents(now, eod);
+            if (events) {
+                const formattedEvents = formatEventsForContext(events);
+                liveData = `📅 UPCOMING CALENDAR EVENTS:\n${formattedEvents}`;
+            }
+        }
         
         if (liveData) {
             prompt += `REAL-TIME FACTUAL DATA FOUND FOR THIS REQUEST:\n${liveData}\n\nUSE THIS EXACT FACTUAL DATA TO WRITE YOUR NEXT MESSAGE! Do not make up any times or statuses.\n\n`;
@@ -98,7 +112,14 @@ async function generateMessage(recipientName, constraint, personaContext = null)
         prompt += `TASK:\nGenerate a WhatsApp message for my contact named "${recipientName}".\nConstraint/Specific Instructions: ${constraint}`;
 
         const result = await model.generateContent(prompt);
-        return result.response.text().trim();
+        const responseText = result.response.text().trim();
+        
+        if (!responseText) {
+            console.warn('⚠️ AI returned empty response text.');
+            return null;
+        }
+        
+        return responseText;
     } catch (error) {
         console.error('Error generating AI message:', error.message);
         // Return null instead of prompt so we don't spam the user with "Find the Live ETA..."

@@ -56,11 +56,12 @@ function startWebhookServer() {
         }
     });
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`🌐 Webhook server listening on port ${PORT}`);
         console.log(`   POST /webhook/trigger  { schedule_id: "<uuid>" }`);
         console.log(`   GET  /health`);
     });
+    app.server = server;
 
     // Poll delivery_queue every 10 seconds for approved messages and send them
     setInterval(async () => {
@@ -69,15 +70,39 @@ function startWebhookServer() {
             const { data } = await supabase
                 .from('delivery_queue')
                 .select('*')
-                .eq('status', 'approved');
+                .eq('status', 'approved')
+                .order('created_at', { ascending: false });
 
             if (data && data.length > 0) {
+                const seenSchedules = new Set();
+                const MAX_AGE_MS = 60 * 60 * 1000; // 60 minutes
+                const now = new Date();
+
                 for (const item of data) {
+                    const createdAt = new Date(item.created_at);
+                    const ageMs = now - createdAt;
+
+                    // 1. Check for absolute Staleness (60 mins)
+                    if (ageMs > MAX_AGE_MS) {
+                        console.log(`⚠️ Skipping STALE message for ${item.recipient_name} (Age: ${Math.round(ageMs/1000/60)}m)`);
+                        await supabase.from('delivery_queue').update({ status: 'stale' }).eq('id', item.id);
+                        continue;
+                    }
+
+                    // 2. Check for Deduplication (only latest per schedule)
+                    if (seenSchedules.has(item.schedule_id)) {
+                        console.log(`⏩ Skipping SUPERSEDED message for ${item.recipient_name} (Newer message available)`);
+                        await supabase.from('delivery_queue').update({ status: 'superseded' }).eq('id', item.id);
+                        continue;
+                    }
+
+                    // 3. Send the latest valid message
                     try {
+                        seenSchedules.add(item.schedule_id);
                         const jid = `${item.contact_number}@s.whatsapp.net`;
                         await globalSock.sendMessage(jid, { text: item.message_text });
                         await supabase.from('delivery_queue').update({ status: 'sent' }).eq('id', item.id);
-                        console.log(`✅ Approved message sent to ${item.recipient_name} (${item.contact_number})`);
+                        console.log(`✅ Approved (Latest) message sent to ${item.recipient_name} (${item.contact_number})`);
                     } catch (sendErr) {
                         console.error(`❌ Failed to send approved message to ${item.recipient_name}:`, sendErr.message);
                     }
