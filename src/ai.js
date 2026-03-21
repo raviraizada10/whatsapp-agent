@@ -1,128 +1,95 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const axios = require('axios');
-const cheerio = require('cheerio');
-const { trackTrain } = require('irctc-connect');
+const registry = require('./tools'); // Already initialized with tools
 
 /**
- * Perform a discrete live web search to inject context for the AI
- */
-async function getLiveWebContext(query) {
-    try {
-        console.log(`🔍 Live Web Search Triggered for: "${query}"`);
-        const res = await axios.post('https://lite.duckduckgo.com/lite/', 
-            'q=' + encodeURIComponent(query), 
-            { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0' } }
-        );
-        const $ = cheerio.load(res.data);
-        const snippets = [];
-        $('.result-snippet').each((i, el) => {
-            snippets.push($(el).text().trim());
-        });
-        if (snippets.length > 0) {
-            console.log(`✅ Web Search Success: Found ${snippets.length} relevant snippets.`);
-            return snippets.slice(0, 3).join('\n---\n');
-        }
-        return null;
-    } catch (e) {
-        console.error('Web Search Failed:', e.message);
-        return null;
-    }
-}
-
-/**
- * Generate a personalized WhatsApp message
- * @param {string} recipientName The name of the recipient (e.g. Dad, Wife)
- * @param {string} constraint The context/constraint for the message
- * @param {string|null} personaContext Optional persona context for this contact
- * @returns {Promise<string>} The generated message
+ * Enhanced Agentic AI Loop using ReAct Pattern
+ * @param {string} recipientName The name of the recipient
+ * @param {string} constraint The user's request context
+ * @param {string|null} personaContext Optional persona context
+ * @returns {Promise<string>} Final WhatsApp message
  */
 async function generateMessage(recipientName, constraint, personaContext = null) {
+    const MAX_STEPS = 3;
+    const modelName = 'gemma-3-27b'; // Optimized for Free Tier (14.4k RPD)
+    
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemma-3-27b-it' });
-        
-        let prompt = `SYSTEM RULES:\nYou are a highly emotionally intelligent, human-like personal assistant.\nYou must generate EXACTLY ONE WhatsApp message.\nThe message is being sent on behalf of the USER to the CONTACT.\nYou MUST NOT include any conversational filler like 'Here is the message:' or quotes.\nJust write the raw text the user will send.\n\n`;
+        const model = genAI.getGenerativeModel({ model: modelName });
 
-        if (personaContext) {
-            prompt += `CRITICAL CONTEXT ABOUT THIS CONTACT (Deeply weave this into the tone/phrasing): "${personaContext}"\n\n`;
-        }
+        let history = [];
+        let systemPrompt = `SYSTEM RULES:
+You are a highly intelligent, human-like agentic personal assistant.
+Your goal is to fulfill the USER's request by thinking step-by-step and using tools when necessary.
 
-        // Trigger live search for specific keywords requesting real-time data
-        const lowerConstraint = constraint ? constraint.toString().toLowerCase() : "";
-        
-        let liveData = null;
-        
-        // 1. Check for specific Train Tracking requests (5-digit number)
-        const trainMatch = lowerConstraint.match(/train\s*(\d{5})|(\d{5})\s*train/);
-        if (trainMatch) {
-            const trainNo = trainMatch[1] || trainMatch[2];
+${registry.formatToolsForPrompt()}
+
+REACTION PROTOCOL:
+Follow this format EXACTLY for every turn:
+THOUGHT: [Reason about what to do next. Do we need a tool? Do we have enough info?]
+ACTION: [Optional: Only if you need a tool. Format: tool_name({"param": "value"})]
+FINAL RESPONSE: [Only when you are ready to answer the user. Write EXACTLY the raw WhatsApp message content. No filler.]
+
+CONSTRAINTS:
+- Use at most ${MAX_STEPS} tool calls per request.
+- Be concise. WhatsApp messages should be natural and brief.
+- If you use a tool, WAIT for the OBSERVATION before giving a FINAL RESPONSE.
+
+USER CONTEXT:
+- Recipient Name: "${recipientName}"
+- Persona Context: "${personaContext || 'None'}"
+- User Request: "${constraint}"
+
+Begin!
+`;
+
+        history.push({ role: 'user', parts: [{ text: systemPrompt }] });
+
+        for (let step = 0; step < MAX_STEPS + 1; step++) {
+            console.log(`🤖 Step ${step + 1}: Informing Agent...`);
             
-            // Look for a date in dd-mm-yyyy or dd/mm/yyyy format
-            const dateMatch = lowerConstraint.match(/(\d{2})[-\/](\d{2})[-\/](\d{4})/);
-            let journeyDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
-            if (dateMatch) {
-                journeyDate = dateMatch[0].replace(/\//g, '-');
+            const result = await model.generateContent({ contents: history });
+            const responseText = result.response.text().trim();
+            console.log(`\n--- AGENT THOUGHT ---\n${responseText}\n--------------------\n`);
+
+            // 1. Check for FINAL RESPONSE
+            if (responseText.includes('FINAL RESPONSE:')) {
+                const finalMsg = responseText.split('FINAL RESPONSE:').pop().trim();
+                return finalMsg || "Sorry, I couldn't generate a clear response.";
             }
 
-            console.log(`🚂 Live Train Tracking Triggered for: ${trainNo} on ${journeyDate}`);
-            try {
-                const trainResponse = await trackTrain(trainNo, journeyDate);
-                if (trainResponse && trainResponse.success && trainResponse.data) {
-                    const data = trainResponse.data;
-                    const scheduleStr = data.stations ? data.stations.map(s => {
-                        const arr = s.arrival || {};
-                        const dep = s.departure || {};
-                        return `${s.stationName} (${s.stationCode}): Arr ${arr.scheduled} -> ${arr.actual} (Delay: ${arr.delay}), Dep ${dep.scheduled} -> ${dep.actual}, Platform: ${s.platform}`;
-                    }).join('\n') : "No station details available";
-                    
-                    liveData = `🚨 LIVE TRAIN STATUS FOR ${data.trainName} (${data.trainNo}) [Journey Date: ${data.date}]:\nStatus Update: ${data.statusNote} (${data.lastUpdate})\n\nSchedule Data:\n${scheduleStr}`;
-                    console.log(`✅ Train Data Fetched Successfully via irctc-connect!`);
+            // 2. Parse ACTION
+            const actionMatch = responseText.match(/ACTION:\s*([a-zA-Z_]+)\((.*)\)/);
+            if (actionMatch) {
+                const toolName = actionMatch[1];
+                let toolParams = {};
+                try {
+                    toolParams = JSON.parse(actionMatch[2]);
+                } catch (e) {
+                    console.warn('⚠️ Tool params parsing failed, attempting raw string cleanup...');
+                    // Fallback for non-strict JSON if possible
+                    const rawParams = actionMatch[2].replace(/'/g, '"');
+                    try { toolParams = JSON.parse(rawParams); } catch(err) {}
                 }
-            } catch (e) {
-                console.error('Train API Failed:', e.message);
+
+                // Execute Tool
+                const observation = await registry.call(toolName, toolParams);
+                console.log(`👁️ OBSERVATION: ${observation.substring(0, 100)}...`);
+
+                // Feedback to LLM
+                history.push({ role: 'model', parts: [{ text: responseText }] });
+                history.push({ role: 'user', parts: [{ text: `OBSERVATION: ${observation}` }] });
+                continue;
+            }
+
+            // Fallback: If no action or final response, just return the text
+            if (step === MAX_STEPS) {
+                console.warn('⚠️ Reached Max Steps without Final Response.');
+                return responseText.replace(/THOUGHT:.*|ACTION:.*/gs, '').trim() || "Agent timed out.";
             }
         }
 
-        // 2. Generic Web Search Fallback
-        const requiresLiveSearch = lowerConstraint.match(/\b(weather|live|score|news|search)\b/);
-        if (!liveData && requiresLiveSearch) {
-            liveData = await getLiveWebContext(constraint);
-        }
-
-        // 3. Calendar Check
-        const requiresCalendar = lowerConstraint.match(/\b(schedule|calendar|meetings|appointments|events)\b/);
-        if (requiresCalendar && !liveData) {
-            const { getUpcomingEvents, formatEventsForContext } = require('./calendar');
-            console.log(`📅 Calendar Check Triggered by constraint.`);
-            const now = new Date();
-            const eod = new Date();
-            eod.setHours(23, 59, 59, 999);
-            // Default to today's events if they ask for schedule
-            const events = await getUpcomingEvents(now, eod);
-            if (events) {
-                const formattedEvents = formatEventsForContext(events);
-                liveData = `📅 UPCOMING CALENDAR EVENTS:\n${formattedEvents}`;
-            }
-        }
-        
-        if (liveData) {
-            prompt += `REAL-TIME FACTUAL DATA FOUND FOR THIS REQUEST:\n${liveData}\n\nUSE THIS EXACT FACTUAL DATA TO WRITE YOUR NEXT MESSAGE! Do not make up any times or statuses.\n\n`;
-        }
-
-        prompt += `TASK:\nGenerate a WhatsApp message for my contact named "${recipientName}".\nConstraint/Specific Instructions: ${constraint}`;
-
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text().trim();
-        
-        if (!responseText) {
-            console.warn('⚠️ AI returned empty response text.');
-            return null;
-        }
-        
-        return responseText;
     } catch (error) {
-        console.error('Error generating AI message:', error.message);
-        // Return null instead of prompt so we don't spam the user with "Find the Live ETA..."
+        console.error('🚨 Agent Execution Error:', error.message);
         return null;
     }
 }

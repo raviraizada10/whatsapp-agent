@@ -1,23 +1,17 @@
 const { generateMessage } = require('../../src/ai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const axios = require('axios');
-const irctcConnect = require('irctc-connect');
+const registry = require('../../src/tools');
 
 jest.mock('@google/generative-ai');
-jest.mock('axios');
-jest.mock('irctc-connect');
+jest.mock('../../src/tools');
 
-describe('AI Module - generateMessage', () => {
+describe('AI Module - generateMessage (ReAct Loop)', () => {
     let mockGenerateContent;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockGenerateContent = jest.fn().mockResolvedValue({
-            response: {
-                text: () => 'Mocked response'
-            }
-        });
+        mockGenerateContent = jest.fn();
 
         GoogleGenerativeAI.mockImplementation(() => ({
             getGenerativeModel: jest.fn().mockReturnValue({
@@ -26,57 +20,63 @@ describe('AI Module - generateMessage', () => {
         }));
     });
 
-    it('should generate a message for a generic constraint', async () => {
+    it('should generate a direct message if no tool is needed', async () => {
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () => 'THOUGHT: I should say hi.\nFINAL RESPONSE: Hello John!'
+            }
+        });
+
         const result = await generateMessage('John', 'Say hi');
         
-        expect(result).toBe('Mocked response');
-        expect(GoogleGenerativeAI).toHaveBeenCalled();
-        expect(mockGenerateContent).toHaveBeenCalled();
-        const callArg = mockGenerateContent.mock.calls[0][0];
-        expect(callArg).toContain('Say hi');
-        expect(callArg).toContain('John');
+        expect(result).toBe('Hello John!');
+        expect(mockGenerateContent).toHaveBeenCalledTimes(1);
     });
 
-    it('should include persona context if provided', async () => {
-        const result = await generateMessage('Mom', 'Ask about dinner', 'She likes Italian food');
+    it('should execute a tool and then provide a final response', async () => {
+        // First call: Request Tool
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () => 'THOUGHT: I need to check the weather.\nACTION: web_search({"query": "weather in London"})'
+            }
+        });
+
+        // Mock Tool Execution
+        registry.call.mockResolvedValueOnce('Cloudy with a chance of rain.');
+
+        // Second call: Provide Final Response after observation
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () => 'THOUGHT: It is cloudy.\nFINAL RESPONSE: It is cloudy in London today.'
+            }
+        });
+
+        const result = await generateMessage('Friend', 'weather in London');
         
-        expect(result).toBe('Mocked response');
-        const callArg = mockGenerateContent.mock.calls[0][0];
-        expect(callArg).toContain('She likes Italian food');
+        expect(result).toBe('It is cloudy in London today.');
+        expect(registry.call).toHaveBeenCalledWith('web_search', { query: 'weather in London' });
+        expect(mockGenerateContent).toHaveBeenCalledTimes(2);
     });
 
-    it('should hit the live web search fallback on matching keywords', async () => {
-        axios.post.mockResolvedValue({ data: '<div class="result-snippet">Search snippet data</div>' });
+    it('should handle tool execution errors gracefully', async () => {
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () => 'THOUGHT: Tracking train.\nACTION: track_train({"trainNo": "12345"})'
+            }
+        });
 
-        const result = await generateMessage('Friend', 'weather in tokyo');
-        
-        expect(result).toBe('Mocked response');
-        expect(axios.post).toHaveBeenCalled();
-        const callArg = mockGenerateContent.mock.calls[0][0];
-        expect(callArg).toContain('Search snippet data');
-    });
+        registry.call.mockResolvedValueOnce('Error: API offline');
 
-    it('should fetch train data when tracking a train', async () => {
-        irctcConnect.trackTrain.mockResolvedValue({
-            success: true,
-            data: {
-                trainName: 'Express',
-                trainNo: '12345',
-                date: '20-03-2024',
-                statusNote: 'On time',
-                lastUpdate: 'Now',
-                stations: []
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () => 'THOUGHT: Search failed.\nFINAL RESPONSE: Sorry, I couldn\'t track your train right now.'
             }
         });
 
         const result = await generateMessage('Dad', 'track train 12345');
         
-        expect(result).toBe('Mocked response');
-        expect(irctcConnect.trackTrain).toHaveBeenCalled();
-        const callArg = mockGenerateContent.mock.calls[0][0];
-        expect(callArg).toContain('12345');
-        expect(callArg).toContain('Express');
-        expect(callArg).toContain('On time');
+        expect(result).toBe("Sorry, I couldn't track your train right now.");
+        expect(mockGenerateContent).toHaveBeenCalledTimes(2);
     });
 
     it('should return null if generateContent throws an error', async () => {

@@ -153,10 +153,26 @@ async function connectToWhatsApp() {
         if (text) {
             console.log(`💬 Received message from ${contactPhone}: ${text}`);
             const { getNotificationSetting, getContactPersona } = require('./db');
-            const { saveMessage, generateContextualReply } = require('./memory');
+            const { saveMessage } = require('./memory');
+            const { generateMessage } = require('./ai');
 
             // Save incoming message to chat history
             await saveMessage(contactPhone, 'user', text);
+
+            // HANDLE AGENT COMMANDS (/agent ...)
+            if (text.toLowerCase().startsWith('/agent')) {
+                const constraint = text.substring(7).trim(); // Remove "/agent "
+                const persona = await getContactPersona(contactPhone);
+                
+                // Trigger the Agentic "Brain"
+                const agentReply = await generateMessage('Admin', constraint || 'How can I help?', persona);
+                
+                if (agentReply) {
+                    await sock.sendMessage(sender, { text: `🤖 *Agent:* ${agentReply}` });
+                    await saveMessage(contactPhone, 'agent', agentReply);
+                }
+                return;
+            }
 
             const notificationsEnabled = await getNotificationSetting();
             
