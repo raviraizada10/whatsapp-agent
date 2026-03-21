@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         name: 'auth_session',
         path: '/',
       });
-      return NextResponse.redirect(new URL('/login', request.url));
+      return NextResponse.redirect(new URL('/login', request.url), { status: 303 });
     }
 
     if (password === process.env.AUTH_PASSWORD) {
