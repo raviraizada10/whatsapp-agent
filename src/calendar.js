@@ -22,12 +22,11 @@ function getCalendarClient() {
         return null;
     }
 
-    const auth = new google.auth.JWT(
-        clientEmail,
-        null,
-        privateKey,
-        ['https://www.googleapis.com/auth/calendar.readonly']
-    );
+    const auth = new google.auth.JWT({
+        email: clientEmail,
+        key: privateKey,
+        scopes: ['https://www.googleapis.com/auth/calendar.readonly']
+    });
 
     return google.calendar({ version: 'v3', auth });
 }
