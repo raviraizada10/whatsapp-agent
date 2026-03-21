@@ -10,7 +10,7 @@ const registry = require('./tools'); // Already initialized with tools
  */
 async function generateMessage(recipientName, constraint, personaContext = null) {
     const MAX_STEPS = 3;
-    const modelName = 'gemma-3-27b'; // Optimized for Free Tier (14.4k RPD)
+    const modelName = 'gemma-3-27b-it'; // Updated to the correct suffix for the IT version
     
     try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
