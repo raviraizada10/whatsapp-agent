@@ -661,26 +661,30 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
                     </div>
                   ) : (
                     <div className="p-6">
-                      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 relative z-10">
-                        <div>
-                          <h3 className="text-xl font-bold text-white flex items-center gap-3">
-                            <CalendarClock className="w-5 h-5 text-emerald-500" />
-                            {s.time_cron}
-                            {!s.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded tracking-wider">PAUSED</span>}
-                          </h3>
-                          <p className="text-emerald-400/80 font-medium text-sm mt-1.5 pl-8">
-                            {(() => { try { return cronstrue.toString(s.time_cron); } catch { return 'Custom Schedule'; }})()}
-                          </p>
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4 relative z-10">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock className="w-4 h-4 text-emerald-500" />
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                              {(() => { try { return cronstrue.toString(s.time_cron); } catch { return 'Custom Schedule'; }})()}
+                            </h3>
+                            {!s.is_active && <span className="text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded tracking-widest uppercase">PAUSED</span>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <code className="text-[11px] font-mono bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400">
+                               {s.time_cron}
+                             </code>
+                          </div>
                         </div>
                         <div className="flex gap-2 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => toggleStatus(s.id, s.is_active)} className={`px-5 py-1.5 rounded-xl border transition text-sm font-medium ${s.is_active ? 'bg-white/5 border-white/10 hover:bg-amber-500/20 text-slate-300 hover:text-amber-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-white'}`}>{s.is_active ? 'Pause' : 'Resume'}</button>
-                          <button onClick={() => startEdit(s)} className="p-2.5 rounded-xl bg-white/5 hover:bg-blue-500/20 text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(s.id)} className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => toggleStatus(s.id, s.is_active)} className={`px-4 py-1.5 rounded-xl border transition text-xs font-bold uppercase tracking-wider ${s.is_active ? 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-amber-500/10 text-slate-500 dark:text-slate-300 hover:text-amber-500' : 'bg-emerald-500 text-white border-emerald-600'}`}>{s.is_active ? 'Pause' : 'Resume'}</button>
+                          <button onClick={() => startEdit(s)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-blue-500/20 text-slate-500 dark:text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(s.id)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-red-500/20 text-slate-500 dark:text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
-                      <div className="p-5 rounded-2xl bg-black/30 border border-white/5 relative z-10">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">AI Constraint Prompt</p>
-                        <p className="text-slate-200 leading-relaxed italic border-l-2 border-emerald-500 pl-3">"{s.constraint_prompt}"</p>
+                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 relative z-10 group/prompt">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">AI Constraint Prompt</p>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed italic border-l-2 border-emerald-500/50 pl-3 text-sm">"{s.constraint_prompt}"</p>
                       </div>
                     </div>
                   )}
