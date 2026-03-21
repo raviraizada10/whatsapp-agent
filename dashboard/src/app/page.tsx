@@ -208,7 +208,7 @@ export default function Dashboard() {
              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                <Bot className="w-5 h-5" />
              </div>
-             <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Antigravity</h1>
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Jarvis</h1>
            </div>
            <button
              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
