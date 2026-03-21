@@ -565,7 +565,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
       <div className="flex flex-col gap-12 mt-8">
         {schedules.length === 0 ? <p className="text-slate-400">No schedules configured.</p> : null}
         
-        {Object.entries(groupedSchedules).map(([recipient, userSchedules]) => (
+        {(Object.entries(groupedSchedules) as any).map(([recipient, userSchedules]: [string, any[]]) => (
           <div key={recipient} className="space-y-6">
             {/* Group Header */}
             <h3 className="text-2xl font-bold text-white flex items-center gap-4 border-b border-white/10 pb-4">
