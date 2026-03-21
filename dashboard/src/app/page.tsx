@@ -93,11 +93,11 @@ export default function Dashboard() {
         {/* Logo */}
         <div className={`flex items-center ${sidebarOpen ? 'gap-3 px-2' : 'justify-center'} mb-4 md:mb-12`}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20 flex-shrink-0">
-            <MessageSquare className="text-white w-5 h-5" />
+            <Bot className="text-white w-5 h-5" />
           </div>
           {sidebarOpen && (
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-               Agent<span className="text-emerald-500">Flow</span>
+               Jarvis
                <div className="md:hidden flex items-center ml-1">
                  {connectionStatus === 'connected' ? (
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
