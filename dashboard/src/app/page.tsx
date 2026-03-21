@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Users, CalendarClock, Settings, MessageSquare, Plus, Trash2, Edit2, Loader2, BellRing, BellOff, Send, Sparkles, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Sun, Moon, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarClock, Settings, MessageSquare, Plus, Trash2, Edit2, Loader2, BellRing, BellOff, Send, Sparkles, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Sun, Moon, LogOut, Bot, LayoutGrid, UserCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Cron } from 'croner';
 import cronstrue from 'cronstrue';
@@ -87,9 +87,9 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'md:w-72' : 'md:w-16'} relative w-full flex-none flex flex-col pt-4 md:pt-8 pb-2 md:pb-4 ${sidebarOpen ? 'px-4' : 'px-2'} bg-white/70 dark:bg-white/5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-white/10 backdrop-blur-xl transition-all duration-300 z-20`}>
+    <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 dark:bg-[#0f172a] transition-colors duration-500 overflow-x-hidden">
+       {/* Sidebar - Desktop only */}
+       <aside className={`hidden md:flex ${sidebarOpen ? 'w-72' : 'w-20'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-white/10 flex-col transition-all duration-300 relative z-50 shrink-0`}>
         {/* Logo */}
         <div className={`flex items-center ${sidebarOpen ? 'gap-3 px-2' : 'justify-center'} mb-4 md:mb-12`}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20 flex-shrink-0">
@@ -202,34 +202,76 @@ export default function Dashboard() {
       </aside>
 
        <main className="flex-1 overflow-y-auto relative z-10">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none" />
+        {/* Mobile Top Bar */}
+        <div className="md:hidden flex items-center justify-between px-4 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/10 sticky top-0 z-40">
+           <div className="flex items-center gap-3">
+             <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+               <Bot className="w-5 h-5" />
+             </div>
+             <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Antigravity</h1>
+           </div>
+           <button
+             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+             className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400"
+           >
+             {mounted && (theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />)}
+           </button>
+        </div>
+
+        {/* Desktop Gradients */}
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none hidden md:block" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[140px] pointer-events-none hidden md:block" />
 
         {/* Main Content Area */}
-
-         <div className="md:p-10 p-4 relative z-10 h-full max-w-6xl mx-auto pb-24 md:pb-10">
+        <div className="md:p-10 p-5 relative h-full max-w-6xl mx-auto pb-28 md:pb-10">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
             </div>
-          ) : (
+          ) : mounted ? (
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="h-full"
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
               >
-                {activeTab === 'overview' && <OverviewTab schedules={schedules} contacts={contacts} />}
+                {activeTab === 'overview' && (
+                  <OverviewTab 
+                    contacts={contacts} 
+                    schedules={schedules} 
+                    onSwitchTab={(t) => setActiveTab(t)}
+                  />
+                )}
                 {activeTab === 'contacts' && <ContactsTab contacts={contacts} onUpdate={fetchData} />}
                 {activeTab === 'schedules' && <SchedulesTab schedules={schedules} contacts={contacts} onUpdate={fetchData} />}
                 {activeTab === 'approvals' && <ApprovalsTab onUpdate={fetchData} />}
-                {activeTab === 'settings' && <SettingsTab enabled={adminNotifications} onToggle={toggleNotifications} />}
+                {activeTab === 'settings' && <SettingsTab adminNotifications={adminNotifications} setAdminNotifications={setAdminNotifications} />}
               </motion.div>
             </AnimatePresence>
-          )}
+          ) : null}
+        </div>
+        {/* Mobile Bottom Navigation */}
+        <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm">
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-2 shadow-2xl flex items-center justify-around">
+            {[
+              { id: 'overview', icon: LayoutGrid, label: 'Overview' },
+              { id: 'schedules', icon: CalendarClock, label: 'Schedules' },
+              { id: 'contacts', icon: Users, label: 'Contacts' },
+              { id: 'approvals', icon: UserCheck, label: 'Approvals' },
+              { id: 'settings', icon: Settings, label: 'Settings' },
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as any)}
+                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${activeTab === item.id ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </main>
     </div>
@@ -240,7 +282,7 @@ export default function Dashboard() {
 // TABS
 // ==========================================
 
-function OverviewTab({ schedules, contacts }: { schedules: any[], contacts: any[] }) {
+function OverviewTab({ schedules, contacts, onSwitchTab }: { schedules: any[], contacts: any[], onSwitchTab: (t: string) => void }) {
   const activeSchedules = schedules.filter(s => s.is_active);
   const [now, setNow] = useState(new Date());
 
@@ -283,7 +325,7 @@ function OverviewTab({ schedules, contacts }: { schedules: any[], contacts: any[
   
   return (
     <div className="space-y-8">
-      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">Dashboard Overview</h2>
+      <h2 className="text-3xl font-bold text-slate-900 dark:text-white dark:bg-clip-text dark:text-transparent dark:bg-gradient-to-r dark:from-white dark:to-slate-400">Dashboard Overview</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard title="Active Schedules" value={activeSchedules.length.toString()} trend="Running on agent" />
@@ -291,37 +333,39 @@ function OverviewTab({ schedules, contacts }: { schedules: any[], contacts: any[
         <StatCard title="System Status" value="Online" trend="Agent connected" />
       </div>
 
-      <div className="mt-8 p-6 rounded-3xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-none">
+      <div className="mt-8 p-6 rounded-3xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
         <h3 className="text-xl font-semibold mb-6 text-slate-800 dark:text-white">Active Executions</h3>
         <ul className="space-y-4">
           {activeSchedules.length === 0 ? <p className="text-slate-400">No active schedules yet.</p> : null}
-          {activeSchedules.map(task => (
-             <li key={task.id} className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 transition duration-300">
-             <div className="flex-1">
-               <p className="font-bold text-slate-900 dark:text-white text-xl flex items-center gap-3">
-                 {task.recipient_name}
-                 <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Active</span>
-               </p>
-               <p className="text-emerald-600 dark:text-emerald-400 font-mono text-sm mt-2 flex items-center gap-2">
-                 <CalendarClock className="w-4 h-4" /> {task.time_cron}
-                 <span className="text-slate-400 dark:text-slate-500 mx-2">|</span> 
-                 <span className="text-emerald-500/80 font-semibold">{getNextRunText(task.time_cron)}</span>
-               </p>
-             </div>
-             <div>
-                <button onClick={() => triggerNow(task.id)} title="Send Message Immediately" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition font-bold text-sm shadow-lg shadow-emerald-500/10">
-                   <Send className="w-4 h-4" /> Send Now
-                </button>
-             </div>
-           </li>
-          ))}
+           {activeSchedules.map(task => (
+              <li key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 transition duration-300 gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="font-bold text-slate-900 dark:text-white text-xl truncate">
+                    {task.recipient_name}
+                  </p>
+                  <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Active</span>
+                </div>
+                <p className="text-emerald-600 dark:text-emerald-400 font-mono text-sm mt-2 flex flex-wrap items-center gap-2">
+                  <span className="flex items-center gap-1.5"><CalendarClock className="w-4 h-4" /> {task.time_cron}</span>
+                  <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span> 
+                  <span className="text-emerald-500/80 font-semibold">{getNextRunText(task.time_cron)}</span>
+                </p>
+              </div>
+              <div className="shrink-0">
+                 <button onClick={() => triggerNow(task.id)} title="Send Message Immediately" className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition font-bold text-sm shadow-lg shadow-emerald-500/10 active:scale-95">
+                    <Send className="w-4 h-4" /> Send Now
+                 </button>
+              </div>
+            </li>
+           ))}
         </ul>
       </div>
     </div>
   );
 }
 
-function SettingsTab({ enabled, onToggle }: { enabled: boolean, onToggle: () => void }) {
+function SettingsTab({ adminNotifications, setAdminNotifications }: { adminNotifications: boolean, setAdminNotifications: (v: boolean) => void }) {
   return (
     <div className="space-y-8">
       <div>
@@ -332,8 +376,8 @@ function SettingsTab({ enabled, onToggle }: { enabled: boolean, onToggle: () => 
       <div className="mt-8 grid gap-4">
         <div className="flex items-center justify-between p-6 rounded-3xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none backdrop-blur-md hover:border-emerald-500/30 transition-all duration-300">
           <div className="flex items-start gap-4">
-             <div className={`p-3 rounded-xl shadow-lg border ${enabled ? 'bg-emerald-500/20 border-emerald-500/30 shadow-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-white/10 text-slate-400'}`}>
-                {enabled ? <BellRing className="w-6 h-6" /> : <BellOff className="w-6 h-6" />}
+             <div className={`p-3 rounded-xl shadow-lg border ${adminNotifications ? 'bg-emerald-500/20 border-emerald-500/30 shadow-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-white/10 text-slate-400'}`}>
+                {adminNotifications ? <BellRing className="w-6 h-6" /> : <BellOff className="w-6 h-6" />}
              </div>
              <div>
                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Admin Forwarding</h3>
@@ -341,10 +385,10 @@ function SettingsTab({ enabled, onToggle }: { enabled: boolean, onToggle: () => 
              </div>
           </div>
           <button 
-             onClick={onToggle} 
-             className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+             onClick={() => setAdminNotifications(!adminNotifications)} 
+             className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${adminNotifications ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
           >
-            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-8' : 'translate-x-1'}`} />
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${adminNotifications ? 'translate-x-8' : 'translate-x-1'}`} />
           </button>
         </div>
       </div>
@@ -430,7 +474,7 @@ function ContactsTab({ contacts, onUpdate }: { contacts: any[], onUpdate: () => 
       <div className="grid gap-4 mt-8">
         {contacts.length === 0 ? <p className="text-slate-400">No contacts yet.</p> : null}
         {contacts.map(c => (
-          <div key={c.id} className="rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none backdrop-blur-md hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 overflow-hidden">
+          <div key={c.id} className="rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300 overflow-hidden">
             {editingId === c.id ? (
               <div className="p-5 flex flex-col gap-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Editing Contact</p>
@@ -446,20 +490,22 @@ function ContactsTab({ contacts, onUpdate }: { contacts: any[], onUpdate: () => 
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between p-5 group">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xl font-bold shadow-inner shrink-0">{c.name[0] || '?'}</div>
-                  <div>
-                    <p className="text-xl font-semibold text-slate-900 dark:text-white">{c.name}</p>
-                    <p className="text-sm text-slate-500 mt-0.5 bg-slate-100 dark:bg-black/30 px-2 py-0.5 rounded-md font-mono inline-block">+{c.phone}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4 group">
+                <div className="flex items-center gap-5 min-w-0">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xl font-bold shadow-inner shrink-0 text-white tracking-widest">{c.name[0] || '?'}</div>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold text-slate-900 dark:text-white truncate">{c.name}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5 bg-slate-100 dark:bg-black/40 px-3 py-1 rounded-lg font-mono inline-block border border-slate-200 dark:border-white/5">+{c.phone}</p>
                     {c.persona_context && (
-                       <p className="text-emerald-600/70 dark:text-emerald-500/70 text-xs mt-2 max-w-xl italic border-l-2 border-emerald-500/30 pl-2">"{c.persona_context}"</p>
+                       <div className="mt-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 max-w-xl group-hover:border-emerald-500/20 transition-all">
+                         <p className="text-emerald-700 dark:text-emerald-400 text-xs italic line-clamp-2">"{c.persona_context}"</p>
+                       </div>
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => startEdit(c)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-blue-500/20 text-slate-500 dark:text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-4 h-4" /></button>
-                  <button onClick={() => handleDelete(c.id)} className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-red-500/20 text-slate-500 dark:text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                   <button onClick={() => startEdit(c)} className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10 transition group-hover:shadow-lg group-hover:shadow-indigo-500/5"><Edit2 className="w-4 h-4" /></button>
+                   <button onClick={() => handleDelete(c.id)} className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition group-hover:shadow-lg group-hover:shadow-red-500/5"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
             )}
@@ -535,30 +581,32 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
     if (!confirm('Are you sure you want to delete this schedule?')) return;
     await supabase.from('schedules').delete().eq('id', id);
     onUpdate();
-  };
-
-  const groupedSchedules = schedules.reduce((acc, curr) => {
+  };  const groupedSchedules = schedules.reduce((acc, curr) => {
     if (!acc[curr.recipient_name]) acc[curr.recipient_name] = [];
     acc[curr.recipient_name].push(curr);
     return acc;
   }, {} as Record<string, any[]>);
 
+  const cronDescription = (cron: string) => {
+    try { return cronstrue.toString(cron); } catch { return 'Custom Schedule'; }
+  };
+
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8 pb-32 max-w-full overflow-x-hidden">
+      <div className="flex justify-between items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-white">AI Schedules</h2>
-          <p className="text-slate-400 mt-1">Configure automated LLM generation rules.</p>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">AI Schedules</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Configure automated LLM generation rules.</p>
         </div>
-        <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 font-medium">
-          <Plus className="w-5 h-5" /> Add Schedule
+        <button onClick={() => setShowAdd(!showAdd)} className="shrink-0 flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 font-medium whitespace-nowrap">
+          <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Add Schedule</span><span className="sm:hidden">Add</span>
         </button>
       </div>
 
       <AnimatePresence>
         {showAdd && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md flex flex-col gap-4">
-            <div className="flex flex-col gap-4">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-6 rounded-3xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-none backdrop-blur-md flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Select Contact</p>
                 <ContactDropdown
@@ -568,8 +616,9 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
                 />
               </div>
               <div className="flex flex-col gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Schedule (English or Cron)</p>
                 <div className="flex gap-2">
-                  <input type="text" placeholder="Type schedule manually, or use AI..." value={nlCron} onChange={e => setNlCron(e.target.value)} className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-emerald-400 placeholder:text-emerald-500/40 text-sm flex-1 outline-none focus:border-emerald-500/50" />
+                  <input type="text" placeholder="e.g. Every day at 9am" value={nlCron} onChange={e => setNlCron(e.target.value)} className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 rounded-xl text-emerald-700 dark:text-emerald-400 placeholder:text-emerald-500/40 text-sm flex-1 outline-none focus:border-emerald-500/50" />
                   <button onClick={async () => {
                      setGenCronLoading(true);
                      try {
@@ -577,126 +626,119 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
                        const data = await res.json();
                        if (data.cron) setCron(data.cron);
                      } finally { setGenCronLoading(false); }
-                  }} disabled={genCronLoading} className="bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                  }} disabled={genCronLoading} className="bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20">
                     {genCronLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} AI
                   </button>
                 </div>
-                <input type="text" placeholder="Generated Cron (e.g. 0 9 * * *)" value={cron} onChange={e => setCron(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 font-mono" />
-                <p className="text-xs text-emerald-500/80 font-semibold px-1">
-                   {cron ? (() => { try { return cronstrue.toString(cron); } catch { return '⚠️ Invalid Cron Format'; }})() : 'No cron generated yet.'}
+                <input type="text" placeholder="Generated Cron" value={cron} onChange={e => setCron(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-3 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 font-mono text-xs" />
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-500/80 font-bold px-1 italic">
+                   {cron ? (() => { try { return cronstrue.toString(cron); } catch { return '⚠️ Invalid Format'; }})() : ''}
                 </p>
               </div>
-
             </div>
-            <textarea placeholder="Instruction for AI (e.g. 'Remind mom to call me, sound caring.')" value={prompt} onChange={e => setPrompt(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 h-24 resize-none" />
-            <div className="flex items-center justify-between mt-2">
+            
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">AI Personality & Logic</p>
+              <textarea placeholder="e.g. 'Remind mom to call me, sound caring.'" value={prompt} onChange={e => setPrompt(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-4 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 h-24 resize-none text-sm" />
+              <PersonaSuggestions onSelect={(s) => setPrompt(s)} />
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-2">
               <button
                 type="button"
                 onClick={() => setRequiresApproval(r => !r)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 ${
                   requiresApproval
-                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400'
+                    : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-white/20'
                 }`}
               >
                 <Clock className="w-4 h-4" />
-                {requiresApproval ? '✋ Approval Required Before Sending' : 'Send Immediately (no approval)'}
+                {requiresApproval ? '✋ Approval Required' : '⚡ Auto-Send (No Approval)'}
               </button>
               <div className="flex gap-2">
                 <button 
                   onClick={() => {
                     setShowAdd(false);
-                    setRecipient(''); setCron('0 9 * * *'); setPrompt(''); setRequiresApproval(false);
                   }} 
-                  className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition font-medium"
+                  className="px-6 py-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition font-bold text-sm flex-1 sm:flex-none"
                 >
                   Cancel
                 </button>
-                <button disabled={saving} onClick={handleAdd} className="bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-400 transition flex-1">Save</button>
+                <button disabled={saving} onClick={handleAdd} className="bg-emerald-500 text-black px-8 py-2.5 rounded-xl font-bold hover:bg-emerald-400 transition flex-1 sm:flex-none shadow-lg shadow-emerald-500/20">Save Schedule</button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col gap-12 mt-8">
-        {schedules.length === 0 ? <p className="text-slate-400">No schedules configured.</p> : null}
+      <div className="flex flex-col gap-14 mt-10">
+        {schedules.length === 0 ? <div className="text-center py-20 opacity-40"><Bot className="w-16 h-16 mx-auto mb-4" /><p className="text-xl font-bold">No schedules configured</p></div> : null}
         
         {(Object.entries(groupedSchedules) as any).map(([recipient, userSchedules]: [string, any[]]) => (
           <div key={recipient} className="space-y-6">
-            {/* Group Header */}
-            <h3 className="text-2xl font-bold text-white flex items-center gap-4 border-b border-white/10 pb-4">
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-4 border-b border-slate-200 dark:border-white/10 pb-4">
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-lg font-bold shadow-inner shrink-0 text-white">
                 {recipient[0] || '?'}
               </div>
-              {recipient}
-              <span className="text-sm font-medium text-slate-500 ml-auto bg-black/30 px-3 py-1 rounded-full">
-                {userSchedules.length} Schedule{userSchedules.length !== 1 ? 's' : ''}
+              <span className="truncate">{recipient}</span>
+              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 ml-auto bg-slate-100 dark:bg-black/30 px-3 py-1 rounded-full border border-slate-200 dark:border-white/5 uppercase tracking-tighter">
+                {userSchedules.length} Sub-Task{userSchedules.length !== 1 ? 's' : ''}
               </span>
             </h3>
 
-            {/* Group Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {userSchedules.map(s => (
-                <div key={s.id} className={`relative overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 group ${s.is_active ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-black/20 border-white/5 opacity-50'}`}>
+                <div key={s.id} className={`relative overflow-hidden rounded-3xl border transition-all duration-300 group ${s.is_active ? 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-emerald-500/30 shadow-sm' : 'bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/5 opacity-60'}`}>
                   
                   {editingId === s.id ? (
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-white mb-4">Edit Schedule</h3>
-                      <div className="flex flex-col gap-4">
+                    <div className="p-6 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Strategy</h3>
+                        <button onClick={() => setEditingId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><XCircle className="w-5 h-5" /></button>
+                      </div>
+                      <div className="space-y-4">
                         <div>
-                          <label className="text-xs text-slate-400 font-bold uppercase mb-1 block">Cron Expression</label>
-                          <input type="text" value={editCron} onChange={e => setEditCron(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 w-full font-mono" />
+                          <label className="text-[10px] text-slate-500 font-black uppercase mb-1.5 block tracking-widest">Cron Interval</label>
+                          <input type="text" value={editCron} onChange={e => setEditCron(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-3 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 w-full font-mono text-xs" />
                         </div>
                         <div>
-                          <label className="text-xs text-slate-400 font-bold uppercase mb-1 block">AI Prompt</label>
-                          <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 w-full h-24 resize-none" />
+                          <label className="text-[10px] text-slate-500 font-black uppercase mb-1.5 block tracking-widest">Logic Constraint</label>
+                          <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-3 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 w-full h-24 resize-none text-sm" />
                         </div>
-                        <div className="flex justify-end gap-3 mt-2">
-                          <button onClick={() => setEditingId(null)} className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl transition">Cancel</button>
-                          <button disabled={saving} onClick={saveEdit} className="bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-400 transition">Save</button>
-                        </div>
+                        <button disabled={saving} onClick={saveEdit} className="w-full bg-emerald-500 text-black py-3 rounded-xl font-bold hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/20">Update Change</button>
                       </div>
                     </div>
                   ) : (
                     <div className="p-5 flex flex-col h-full">
-                      {/* Card Header: Actions + Status */}
-                      <div className="flex justify-between items-start mb-4 gap-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
-                              {(() => { try { return cronstrue.toString(s.time_cron); } catch { return 'Custom Schedule'; }})()}
-                            </h3>
-                            {!s.is_active && (
-                              <span className="text-[10px] font-black bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded tracking-tighter uppercase">PAUSED</span>
-                            )}
+                          <div className="flex flex-wrap items-center gap-3 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400 opacity-80">{s.time_cron}</span>
+                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${s.is_active ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-slate-100 dark:bg-white/5 text-slate-400 border-slate-200 dark:border-white/10'}`}>
+                              {s.is_active ? 'Running' : 'Paused'}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                             <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-widest">Cron</span>
-                             <code className="text-xs font-mono bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300">
-                               {s.time_cron}
-                             </code>
-                          </div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug truncate">
+                            {cronDescription(s.time_cron)}
+                          </h3>
                         </div>
-                        <div className="flex gap-1.5 shrink-0">
-                          <button onClick={() => toggleStatus(s.id, s.is_active)} className={`px-3 py-1.5 rounded-lg border transition text-[10px] font-bold uppercase tracking-wider ${s.is_active ? 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-amber-500/10 text-slate-500 dark:text-slate-300 hover:text-amber-500' : 'bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20'}`}>{s.is_active ? 'Pause' : 'Resume'}</button>
-                          <button onClick={() => startEdit(s)} className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-blue-500/20 text-slate-500 dark:text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-red-500/20 text-slate-500 dark:text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button onClick={() => startEdit(s)} className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-500/10 transition"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 transition"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => toggleStatus(s.id, s.is_active)} className={`px-3 py-1.5 rounded-lg border transition text-[10px] font-bold uppercase tracking-wider ${s.is_active ? 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-amber-500 hover:border-amber-500/30' : 'bg-emerald-500 text-black border-emerald-600 shadow-lg shadow-emerald-500/20'}`}>{s.is_active ? 'Pause' : 'Resume'}</button>
                         </div>
                       </div>
 
-                      {/* Prompt Box */}
-                      <div className="mt-auto p-4 rounded-xl bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 relative group/prompt">
+                      <div className="mt-auto p-4 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 relative group/prompt">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">AI Logic</p>
-                          <Sparkles className="w-3 h-3 text-emerald-500/30 group-hover/prompt:text-emerald-500/60 transition-colors" />
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Constraint</p>
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-500/30 group-hover/prompt:text-emerald-500/60 transition-all" />
                         </div>
-                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed italic border-l-2 border-emerald-500/30 pl-3 text-[13px] line-clamp-3 group-hover/prompt:line-clamp-none transition-all duration-300">"{s.constraint_prompt}"</p>
+                        <p className="text-slate-600 dark:text-slate-300 leading-relaxed italic border-l-2 border-emerald-500/30 pl-3 text-[13px] line-clamp-3 group-hover/prompt:line-clamp-none transition-all duration-300">"{s.constraint_prompt}"</p>
                       </div>
                     </div>
                   )}
-
                 </div>
               ))}
             </div>
@@ -709,10 +751,13 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
 
 function StatCard({ title, value, trend }: { title: string, value: string, trend: string }) {
   return (
-    <div className="p-6 rounded-3xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none backdrop-blur-md hover:bg-slate-50 dark:hover:bg-white/10 hover:shadow-xl hover:shadow-black/10 transition-all duration-300">
-      <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400">{title}</h3>
-      <p className="text-4xl font-extrabold mt-3 text-slate-900 dark:text-white tracking-tight">{value}</p>
-      <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-3 font-medium flex items-center gap-1">{trend}</p>
+    <div className="p-6 rounded-3xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none backdrop-blur-md hover:border-emerald-500/30 hover:shadow-xl hover:shadow-black/5 transition-all duration-300">
+      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{title}</h3>
+      <p className="text-4xl font-black mt-3 text-slate-900 dark:text-white tracking-tight">{value}</p>
+      <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-4 font-bold flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        {trend}
+      </p>
     </div>
   );
 }
@@ -729,47 +774,47 @@ function ContactDropdown({ contacts, value, onChange }: { contacts: any[], value
       <button
         type="button"
         onClick={() => { setOpen(o => !o); setSearch(''); }}
-        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all duration-200 ${
-          open ? 'border-emerald-500/50 bg-black/60' : 'border-white/10 bg-black/40 hover:border-white/20'
+        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all duration-300 ${
+          open ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-slate-50 dark:bg-black/60' : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 hover:border-slate-300 dark:hover:border-white/20 text-slate-900 dark:text-white'
         }`}
       >
         {selected ? (
           <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">{selected.name[0]}</span>
+            <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold">{selected.name[0]}</span>
             <div className="text-left">
-              <p className="text-white font-semibold">{selected.name}</p>
-              <p className="text-slate-400 font-mono text-xs">+{selected.phone}</p>
+              <p className="text-slate-900 dark:text-white font-bold leading-none mb-0.5">{selected.name}</p>
+              <p className="text-slate-500 dark:text-slate-400 font-mono text-[10px]">+{selected.phone}</p>
             </div>
           </div>
         ) : (
-          <span className="text-slate-500">Select a contact...</span>
+          <span className="text-slate-400">Choose a contact...</span>
         )}
-        <svg className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${open ? 'rotate-90' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-[#0d1729] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-          <div className="p-2 border-b border-white/5">
+        <div className="absolute top-full mt-2 left-0 right-0 z-[60] bg-white dark:bg-[#111827] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="p-3 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5">
             <input
               autoFocus
               type="text"
               placeholder="Search..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 px-3 py-2 rounded-lg text-white text-sm outline-none focus:border-emerald-500/50 placeholder:text-slate-600"
+              className="w-full bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-2 rounded-xl text-slate-900 dark:text-white text-sm outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400"
             />
           </div>
-          <div className="max-h-52 overflow-y-auto">
-            {filtered.length === 0 && <p className="text-slate-500 text-sm text-center py-4">No contacts found</p>}
+          <div className="max-h-60 overflow-y-auto p-1.5 p-1.5 custom-scrollbar">
+            {filtered.length === 0 && <p className="text-slate-400 text-xs text-center py-8 font-medium italic">No matches found</p>}
             {filtered.map(c => (
               <button key={c.id} type="button" onClick={() => { onChange(c.name); setOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${value === c.name ? 'bg-emerald-500/15 text-emerald-400' : 'hover:bg-white/5 text-slate-200'}`}>
-                <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">{c.name[0]}</span>
-                <div>
-                  <p className="font-semibold text-sm">{c.name}</p>
-                  <p className="text-slate-400 font-mono text-xs">+{c.phone}</p>
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 ${value === c.name ? 'bg-emerald-500 text-black font-bold' : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300'}`}>
+                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${value === c.name ? 'bg-black/20 text-black' : 'bg-gradient-to-tr from-indigo-500 to-purple-500 text-white'}`}>{c.name[0]}</span>
+                <div className="min-w-0">
+                  <p className="font-bold text-sm truncate">{c.name}</p>
+                  <p className={`text-[10px] font-mono ${value === c.name ? 'text-black/60' : 'text-slate-400'}`}>+{c.phone}</p>
                 </div>
-                {value === c.name && <span className="ml-auto text-emerald-400 text-sm">✓</span>}
+                {value === c.name && <CheckCircle className="ml-auto w-4 h-4" />}
               </button>
             ))}
           </div>
@@ -878,13 +923,13 @@ function ApprovalsTab({ onUpdate }: { onUpdate?: () => void }) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-white">Approvals</h2>
-          <p className="text-slate-400 mt-1">Review AI-generated messages before they are sent.</p>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Approvals</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Review AI generated messages before they go out.</p>
         </div>
-        <button onClick={fetchQueue} className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 px-4 py-2 rounded-xl transition text-sm">
+        <button onClick={fetchQueue} className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl transition text-sm">
           <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </div>
@@ -892,7 +937,7 @@ function ApprovalsTab({ onUpdate }: { onUpdate?: () => void }) {
       {loading ? (
         <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald-500" /></div>
       ) : queue.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-3">
+        <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 gap-3">
           <CheckCircle className="w-12 h-12 text-emerald-500/30" />
           <p className="text-lg font-semibold">All clear — no messages awaiting approval.</p>
           <p className="text-sm">Enable "Approval Required" on a schedule to see drafts here.</p>
@@ -900,24 +945,24 @@ function ApprovalsTab({ onUpdate }: { onUpdate?: () => void }) {
       ) : (
         <div className="grid gap-4">
           {queue.map(item => (
-            <div key={item.id} className="p-5 rounded-2xl bg-white/5 border border-amber-500/20 backdrop-blur-md">
+            <div key={item.id} className="p-6 rounded-3xl bg-white dark:bg-white/5 border border-amber-500/20 shadow-sm dark:shadow-none">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">Draft</span>
-                    <span className="text-sm font-semibold text-white">To: {item.recipient_name}</span>
-                    <span className="text-slate-500 font-mono text-xs">+{item.contact_number}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">Draft</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">To: {item.recipient_name}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-mono text-xs">+{item.contact_number}</span>
                   </div>
-                  <p className="text-slate-200 text-base leading-relaxed bg-black/30 px-4 py-3 rounded-xl border border-white/5">
+                  <p className="text-slate-700 dark:text-slate-200 text-base leading-relaxed bg-slate-50 dark:bg-black/30 px-4 py-3 rounded-xl border border-slate-200 dark:border-white/5">
                     {item.message_text}
                   </p>
-                  <p className="text-xs text-slate-600 mt-2">{new Date(item.created_at).toLocaleString()}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-600 mt-2">{new Date(item.created_at).toLocaleString()}</p>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">
                   <button
                     onClick={() => approve(item)}
                     disabled={acting === item.id}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 font-semibold text-sm transition"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 dark:hover:bg-emerald-500/30 font-bold text-sm transition"
                   >
                     {acting === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Send
@@ -925,7 +970,7 @@ function ApprovalsTab({ onUpdate }: { onUpdate?: () => void }) {
                   <button
                     onClick={() => discard(item.id)}
                     disabled={acting === item.id}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400 font-semibold text-sm transition"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-700 dark:hover:text-red-400 font-bold text-sm transition"
                   >
                     <XCircle className="w-4 h-4" /> Discard
                   </button>
