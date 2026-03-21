@@ -14,14 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AgentFlow",
-  description: "AI-powered WhatsApp message scheduling agent",
+  title: "Jarvis",
+  description: "Autonomous high-intelligence WhatsApp agent",
   manifest: "/manifest.json",
-  themeColor: "#10b981",
+  themeColor: "#0891b2",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "AgentFlow",
+    title: "Jarvis",
   },
   viewport: {
     width: "device-width",
@@ -30,7 +30,8 @@ export const metadata: Metadata = {
     userScalable: false,
   },
   icons: {
-    apple: "/icons/icon-192.png",
+    icon: "/favicon.png",
+    apple: "/favicon.png",
   },
 };
 
