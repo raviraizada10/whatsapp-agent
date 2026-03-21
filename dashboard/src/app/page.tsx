@@ -480,6 +480,12 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
     onUpdate();
   };
 
+  const groupedSchedules = schedules.reduce((acc, curr) => {
+    if (!acc[curr.recipient_name]) acc[curr.recipient_name] = [];
+    acc[curr.recipient_name].push(curr);
+    return acc;
+  }, {} as Record<string, any[]>);
+
   return (
     <div className="space-y-8 pb-20">
       <div className="flex justify-between items-center">
@@ -556,54 +562,74 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
         )}
       </AnimatePresence>
 
-      <div className="grid gap-6 mt-8">
+      <div className="flex flex-col gap-12 mt-8">
         {schedules.length === 0 ? <p className="text-slate-400">No schedules configured.</p> : null}
-        {schedules.map(s => (
-          <div key={s.id} className={`relative overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 group ${s.is_active ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-black/20 border-white/5 opacity-50'}`}>
-            
-            {editingId === s.id ? (
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Edit Schedule for {s.recipient_name}</h3>
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="text-xs text-slate-400 font-bold uppercase mb-1 block">Cron Expression</label>
-                    <input type="text" value={editCron} onChange={e => setEditCron(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 w-full font-mono" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400 font-bold uppercase mb-1 block">AI Prompt</label>
-                    <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 w-full h-24 resize-none" />
-                  </div>
-                  <div className="flex justify-end gap-3 mt-2">
-                    <button onClick={() => setEditingId(null)} className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl transition">Cancel</button>
-                    <button disabled={saving} onClick={saveEdit} className="bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-400 transition">Save</button>
-                  </div>
-                </div>
+        
+        {Object.entries(groupedSchedules).map(([recipient, userSchedules]) => (
+          <div key={recipient} className="space-y-6">
+            {/* Group Header */}
+            <h3 className="text-2xl font-bold text-white flex items-center gap-4 border-b border-white/10 pb-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-lg font-bold shadow-inner shrink-0 text-white">
+                {recipient[0] || '?'}
               </div>
-            ) : (
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6 relative z-10">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                      {s.recipient_name}
-                      {!s.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">PAUSED</span>}
-                    </h3>
-                    <p className="text-emerald-400 font-mono text-sm mt-1.5 flex items-center gap-2">
-                      <CalendarClock className="w-4 h-4" /> {s.time_cron}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => toggleStatus(s.id, s.is_active)} className="px-5 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-indigo-500/20 text-slate-300 hover:text-white transition text-sm font-medium">{s.is_active ? 'Pause' : 'Resume'}</button>
-                    <button onClick={() => startEdit(s)} className="p-2.5 rounded-xl bg-white/5 hover:bg-blue-500/20 text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(s.id)} className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-                <div className="p-5 rounded-2xl bg-black/30 border border-white/5 relative z-10">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">AI Constraint Prompt</p>
-                  <p className="text-slate-200 leading-relaxed italic border-l-2 border-emerald-500 pl-3">"{s.constraint_prompt}"</p>
-                </div>
-              </div>
-            )}
+              {recipient}
+              <span className="text-sm font-medium text-slate-500 ml-auto bg-black/30 px-3 py-1 rounded-full">
+                {userSchedules.length} Schedule{userSchedules.length !== 1 ? 's' : ''}
+              </span>
+            </h3>
 
+            {/* Group Cards */}
+            <div className="grid gap-5">
+              {userSchedules.map(s => (
+                <div key={s.id} className={`relative overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 group ${s.is_active ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-black/20 border-white/5 opacity-50'}`}>
+                  
+                  {editingId === s.id ? (
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Edit Schedule</h3>
+                      <div className="flex flex-col gap-4">
+                        <div>
+                          <label className="text-xs text-slate-400 font-bold uppercase mb-1 block">Cron Expression</label>
+                          <input type="text" value={editCron} onChange={e => setEditCron(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 w-full font-mono" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-400 font-bold uppercase mb-1 block">AI Prompt</label>
+                          <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:border-emerald-500 w-full h-24 resize-none" />
+                        </div>
+                        <div className="flex justify-end gap-3 mt-2">
+                          <button onClick={() => setEditingId(null)} className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl transition">Cancel</button>
+                          <button disabled={saving} onClick={saveEdit} className="bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-400 transition">Save</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6 relative z-10">
+                        <div>
+                          <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                            <CalendarClock className="w-5 h-5 text-emerald-500" />
+                            {s.time_cron}
+                            {!s.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded tracking-wider">PAUSED</span>}
+                          </h3>
+                          <p className="text-emerald-400/80 font-medium text-sm mt-1.5 pl-8">
+                            {(() => { try { return cronstrue.toString(s.time_cron); } catch { return 'Custom Schedule'; }})()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => toggleStatus(s.id, s.is_active)} className={`px-5 py-1.5 rounded-xl border transition text-sm font-medium ${s.is_active ? 'bg-white/5 border-white/10 hover:bg-amber-500/20 text-slate-300 hover:text-amber-400' : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-white'}`}>{s.is_active ? 'Pause' : 'Resume'}</button>
+                          <button onClick={() => startEdit(s)} className="p-2.5 rounded-xl bg-white/5 hover:bg-blue-500/20 text-slate-300 hover:text-blue-400 transition cursor-pointer"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(s.id)} className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-300 hover:text-red-400 transition cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                      <div className="p-5 rounded-2xl bg-black/30 border border-white/5 relative z-10">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">AI Constraint Prompt</p>
+                        <p className="text-slate-200 leading-relaxed italic border-l-2 border-emerald-500 pl-3">"{s.constraint_prompt}"</p>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
