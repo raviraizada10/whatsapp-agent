@@ -25,11 +25,13 @@ describe('DB Module', () => {
 
     describe('getActiveSchedules', () => {
         it('should return schedules if found', async () => {
-            expectedSupabaseMock.eq.mockResolvedValueOnce({ data: [{ id: 1, is_active: true }], error: null });
+            expectedSupabaseMock.eq.mockResolvedValueOnce({ data: [{ id: 1, is_active: true, contacts: { name: 'Alice', phone: '123' } }], error: null });
             
             const schedules = await getActiveSchedules();
             expect(schedules).toHaveLength(1);
             expect(schedules[0].id).toBe(1);
+            expect(schedules[0].recipient_name).toBe('Alice');
+            expect(schedules[0].contact_number).toBe('123');
             expect(expectedSupabaseMock.from).toHaveBeenCalledWith('schedules');
         });
 

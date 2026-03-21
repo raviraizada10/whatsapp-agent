@@ -337,12 +337,15 @@ function OverviewTab({ schedules, contacts, onSwitchTab }: { schedules: any[], c
         <h3 className="text-xl font-semibold mb-6 text-slate-800 dark:text-white">Active Executions</h3>
         <ul className="space-y-4">
           {activeSchedules.length === 0 ? <p className="text-slate-400">No active schedules yet.</p> : null}
-           {activeSchedules.map(task => (
+           {activeSchedules.map(task => {
+             const contact = contacts.find(c => c.id === task.contact_id);
+             const displayName = contact ? contact.name : task.recipient_name; // fallback to recipient_name for backward compatibility during migration
+             return (
               <li key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 transition duration-300 gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="font-bold text-slate-900 dark:text-white text-xl truncate">
-                    {task.recipient_name}
+                    {displayName}
                   </p>
                   <span className="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Active</span>
                 </div>
@@ -358,7 +361,8 @@ function OverviewTab({ schedules, contacts, onSwitchTab }: { schedules: any[], c
                  </button>
               </div>
             </li>
-           ))}
+             );
+           })}
         </ul>
       </div>
     </div>
@@ -542,8 +546,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
     }
 
     await supabase.from('schedules').insert([{ 
-      recipient_name: recipient,
-      contact_number: contact.phone,
+      contact_id: contact.id,
       time_cron: cron,
       constraint_prompt: prompt,
       requires_approval: requiresApproval
@@ -582,8 +585,10 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
     await supabase.from('schedules').delete().eq('id', id);
     onUpdate();
   };  const groupedSchedules = schedules.reduce((acc, curr) => {
-    if (!acc[curr.recipient_name]) acc[curr.recipient_name] = [];
-    acc[curr.recipient_name].push(curr);
+    const contact = contacts.find(c => c.id === curr.contact_id);
+    const recipientName = contact ? contact.name : 'Unknown Contact';
+    if (!acc[recipientName]) acc[recipientName] = [];
+    acc[recipientName].push(curr);
     return acc;
   }, {} as Record<string, any[]>);
 
@@ -896,10 +901,23 @@ function ApprovalsTab({ onUpdate }: { onUpdate?: () => void }) {
     setLoading(true);
     const { data } = await supabase
       .from('delivery_queue')
-      .select('*')
+      .select(`
+        *,
+        contacts (
+          name,
+          phone
+        )
+      `)
       .eq('status', 'draft')
       .order('created_at', { ascending: false });
-    setQueue(data || []);
+      
+    const mappedQueue = (data || []).map(row => ({
+        ...row,
+        recipient_name: row.contacts?.name || 'Unknown Contact',
+        contact_number: row.contacts?.phone || 'Unknown Phone'
+    }));
+    
+    setQueue(mappedQueue);
     setLoading(false);
   };
 

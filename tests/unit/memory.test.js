@@ -9,7 +9,8 @@ jest.mock('../../src/db', () => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis()
+        limit: jest.fn().mockReturnThis(),
+        single: jest.fn().mockReturnThis()
     }
 }));
 
@@ -32,13 +33,14 @@ describe('Memory Module', () => {
 
     describe('saveMessage', () => {
         it('should save a message successfully', async () => {
+            supabase.single.mockResolvedValueOnce({ data: { id: 'contact_123' } });
             supabase.insert.mockResolvedValueOnce({ error: null });
             
             await saveMessage('12345', 'user', 'Hello Agent');
             
             expect(supabase.from).toHaveBeenCalledWith('chat_history');
             expect(supabase.insert).toHaveBeenCalledWith([{
-                contact_phone: '12345',
+                contact_id: 'contact_123',
                 role: 'user',
                 content: 'Hello Agent'
             }]);
@@ -47,6 +49,7 @@ describe('Memory Module', () => {
 
     describe('getConversationContext', () => {
         it('should format message history correctly', async () => {
+            supabase.single.mockResolvedValueOnce({ data: { id: 'contact_123' } });
             supabase.limit.mockResolvedValueOnce({
                 data: [
                     { role: 'user', content: 'Hi' },
@@ -62,6 +65,7 @@ describe('Memory Module', () => {
         });
 
         it('should return empty string if no history', async () => {
+            supabase.single.mockResolvedValueOnce({ data: { id: 'contact_123' } });
             supabase.limit.mockResolvedValueOnce({ data: [] });
             
             const context = await getConversationContext('12345');
@@ -73,6 +77,7 @@ describe('Memory Module', () => {
     describe('generateContextualReply', () => {
         it('should generate a reply with or without context', async () => {
             // Mock empty history first
+            supabase.single.mockResolvedValueOnce({ data: { id: 'contact_123' } });
             supabase.limit.mockResolvedValueOnce({ data: [] });
             
             const reply = await generateContextualReply('12345', 'John', 'How are you?');

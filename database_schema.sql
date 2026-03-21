@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS contacts (
 -- 2. Schedules (The Core Agent Cron Tasks)
 CREATE TABLE IF NOT EXISTS schedules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  recipient_name TEXT NOT NULL,
-  contact_number TEXT NOT NULL,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
   time_cron TEXT NOT NULL,
   constraint_prompt TEXT NOT NULL,
   is_active BOOLEAN DEFAULT true,
@@ -45,8 +44,7 @@ INSERT INTO settings (id, admin_notifications) VALUES (1, true) ON CONFLICT (id)
 CREATE TABLE IF NOT EXISTS delivery_queue (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   schedule_id UUID REFERENCES schedules(id) ON DELETE CASCADE,
-  recipient_name TEXT NOT NULL,
-  contact_number TEXT NOT NULL,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
   message_text TEXT NOT NULL,
   status TEXT DEFAULT 'draft', -- draft, approved, sent, discarded
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -55,7 +53,7 @@ CREATE TABLE IF NOT EXISTS delivery_queue (
 -- 5. Chat History (For two-way context conversational memory)
 CREATE TABLE IF NOT EXISTS chat_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  contact_phone TEXT NOT NULL,
+  contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE,
   role TEXT NOT NULL, -- 'user' or 'agent'
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

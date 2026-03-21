@@ -19,17 +19,34 @@ if (supabaseUrl && supabaseKey) {
 async function getActiveSchedules() {
     if (!supabase) return [];
     
-    // Assumes a table named 'schedules' with columns 'id', 'recipient', 'contact_number', 'constraint', 'time_cron', 'is_active'
+    // Fetch schedules and join with contacts table to get name/phone
     const { data, error } = await supabase
         .from('schedules')
-        .select('*')
+        .select(`
+            id,
+            contact_id,
+            time_cron,
+            constraint_prompt,
+            is_active,
+            requires_approval,
+            contacts (
+                name,
+                phone
+            )
+        `)
         .eq('is_active', true);
 
     if (error) {
         console.error('Error fetching schedules:', error);
         return [];
     }
-    return data || [];
+    
+    // Map the relational data back to the flat structure expected by the scheduler for backward compatibility
+    return (data || []).map(row => ({
+        ...row,
+        recipient_name: row.contacts?.name || 'Unknown Contact',
+        contact_number: row.contacts?.phone || 'Unknown Phone'
+    }));
 }
 
 async function getNotificationSetting() {

@@ -4,13 +4,25 @@ const { generateMessage } = require('./ai');
 const HISTORY_LIMIT = 10; // Last N messages to include as context
 
 /**
+ * Find contact ID by phone number
+ */
+async function getContactIdByPhone(phone) {
+    if (!supabase) return null;
+    const { data } = await supabase.from('contacts').select('id').eq('phone', phone).single();
+    return data ? data.id : null;
+}
+
+/**
  * Save a message to chat_history
  */
 async function saveMessage(contactPhone, role, content) {
     if (!supabase) return;
     try {
+        const contactId = await getContactIdByPhone(contactPhone);
+        if (!contactId) return; // Ignore messages from unknown contacts
+
         await supabase.from('chat_history').insert([{
-            contact_phone: contactPhone,
+            contact_id: contactId,
             role, // 'user' or 'agent'
             content
         }]);
@@ -25,10 +37,13 @@ async function saveMessage(contactPhone, role, content) {
 async function getConversationContext(contactPhone) {
     if (!supabase) return '';
     try {
+        const contactId = await getContactIdByPhone(contactPhone);
+        if (!contactId) return '';
+
         const { data } = await supabase
             .from('chat_history')
             .select('role, content, created_at')
-            .eq('contact_phone', contactPhone)
+            .eq('contact_id', contactId)
             .order('created_at', { ascending: false })
             .limit(HISTORY_LIMIT);
 
