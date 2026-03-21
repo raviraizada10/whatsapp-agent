@@ -33,27 +33,60 @@ function getCalendarClient() {
 }
 
 /**
- * Fetch upcoming events from a specific calendar
+ * Fetch upcoming events from ALL accessible calendars
  * @param {Date} timeMin Start time
  * @param {Date} timeMax End time
- * @param {number} maxResults Max number of events to return
+ * @param {number} maxResults Max number of events to return ACROSS all calendars
  */
 async function getUpcomingEvents(timeMin, timeMax, maxResults = 10) {
     const calendar = getCalendarClient();
     if (!calendar) return null;
 
     try {
-        const response = await calendar.events.list({
-            calendarId: 'primary', // Assumes the service account has access to the primary calendar it was shared with
-            timeMin: timeMin.toISOString(),
-            timeMax: timeMax ? timeMax.toISOString() : undefined,
-            maxResults: maxResults,
-            singleEvents: true,
-            orderBy: 'startTime',
+        // 1. List all calendars accessible to this service account
+        const calendarList = await calendar.calendarList.list();
+        const calendars = calendarList.data.items || [];
+        
+        if (calendars.length === 0) {
+            console.warn('⚠️ No calendars shared with this service account.');
+            return [];
+        }
+
+        console.log(`📅 Multi-Calendar: Searching for events in ${calendars.length} calendars...`);
+        
+        const allEvents = [];
+        
+        // 2. Fetch events from each calendar
+        for (const cal of calendars) {
+            try {
+                const response = await calendar.events.list({
+                    calendarId: cal.id,
+                    timeMin: timeMin.toISOString(),
+                    timeMax: timeMax ? timeMax.toISOString() : undefined,
+                    maxResults: maxResults,
+                    singleEvents: true,
+                    orderBy: 'startTime',
+                });
+                
+                if (response.data.items) {
+                    allEvents.push(...response.data.items);
+                }
+            } catch (err) {
+                console.error(`❌ Failed to fetch events for calendar "${cal.summary}" (${cal.id}):`, err.message);
+            }
+        }
+
+        // 3. Sort merged events by start time
+        allEvents.sort((a, b) => {
+            const startA = new Date(a.start.dateTime || a.start.date);
+            const startB = new Date(b.start.dateTime || b.start.date);
+            return startA - startB;
         });
-        return response.data.items;
+
+        // 4. Return limited results
+        return allEvents.slice(0, maxResults);
     } catch (error) {
-        console.error('❌ Error fetching Google Calendar events:', error.message);
+        console.error('❌ Error in multi-calendar fetch:', error.message);
         return null;
     }
 }
