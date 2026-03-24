@@ -36,14 +36,15 @@ function initScheduler(sock) {
                     await supabase.from('manual_triggers').delete().eq('id', trigger.id);
                     if (activeJobs[trigger.schedule_id]) {
                         console.log(`\n⚡ MANUAL TRIGGER: Immediate execution for ${activeJobs[trigger.schedule_id].recipient_name}!`);
-                        await activeJobs[trigger.schedule_id].invokeJob();
+                        // No await here to avoid blocking the loop, but we trigger it immediately
+                        activeJobs[trigger.schedule_id].invokeJob();
                     }
                 }
             }
         } catch (e) {
             console.error('Manual trigger polling error:', e.message);
         }
-    }, 5000);
+    }, 1000);
 
     const syncJobs = async () => {
         try {

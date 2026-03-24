@@ -290,6 +290,7 @@ export default function Dashboard() {
 function OverviewTab({ schedules, contacts, onSwitchTab }: { schedules: any[], contacts: any[], onSwitchTab: (t: string) => void }) {
   const activeSchedules = schedules.filter(s => s.is_active);
   const [now, setNow] = useState(new Date());
+  const [triggeringId, setTriggeringId] = useState<string | null>(null);
 
   useEffect(() => {
     // Update every single second for the live countdown clock
@@ -325,7 +326,10 @@ function OverviewTab({ schedules, contacts, onSwitchTab }: { schedules: any[], c
   };
 
   const triggerNow = async (scheduleId: string) => {
+    if (triggeringId) return;
+    setTriggeringId(scheduleId);
     await supabase.from('manual_triggers').insert([{ schedule_id: scheduleId }]);
+    setTimeout(() => setTriggeringId(null), 3000);
   };
   
   return (
@@ -361,9 +365,15 @@ function OverviewTab({ schedules, contacts, onSwitchTab }: { schedules: any[], c
                 </p>
               </div>
               <div className="shrink-0">
-                 <button onClick={() => triggerNow(task.id)} title="Send Message Immediately" className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition font-bold text-sm shadow-lg shadow-emerald-500/10 active:scale-95">
-                    <Send className="w-4 h-4" /> Send Now
-                 </button>
+                 <button 
+                    onClick={() => triggerNow(task.id)} 
+                    disabled={triggeringId === task.id}
+                    title="Send Message Immediately" 
+                    className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border transition font-bold text-sm shadow-lg active:scale-95 ${triggeringId === task.id ? 'bg-slate-100 dark:bg-white/5 text-slate-400 border-slate-200 dark:border-white/10 cursor-not-allowed' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500 hover:text-white shadow-emerald-500/10'}`}
+                  >
+                     {triggeringId === task.id ? <CheckCircle className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                     {triggeringId === task.id ? 'Triggered!' : 'Send Now'}
+                  </button>
               </div>
             </li>
              );
