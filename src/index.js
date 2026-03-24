@@ -205,6 +205,11 @@ async function connectToWhatsApp() {
 
 async function startApp() {
     try {
+        const delay = process.env.STARTUP_DELAY_MS || 30000; // Default to 30s for Render/Deployment safety
+        console.log(`⏳ [DEPLOYMENT SAFETY] Waiting ${delay / 1000}s for old instances to clear...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
         console.log('🧹 Wiping stale connection states from Dashboard DB...');
         await supabase.from('settings').update({ connection_status: 'disconnected', qr_code: null }).eq('id', 1);
         await connectToWhatsApp();
