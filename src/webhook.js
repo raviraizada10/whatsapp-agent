@@ -159,7 +159,7 @@ function startWebhookServer() {
                         // Mark as sent immediately after success
                         const { error: updErr } = await supabase
                             .from('delivery_queue')
-                            .update({ status: 'sent', sent_at: new Date().toISOString() })
+                            .update({ status: 'sent' }) // REMOVED sent_at for now to prevent schema cache errors
                             .eq('id', item.id);
                         
                         if (updErr) console.error(`⚠️ Failed to update status to 'sent' for ${item.id}:`, updErr.message);

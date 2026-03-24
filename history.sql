@@ -13,3 +13,6 @@ ALTER TABLE public.history ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for public access (adjust as needed for your specific security model)
 CREATE POLICY "Enable all for authenticated users" ON public.history FOR ALL USING (true);
+
+-- Add missing column to delivery_queue (required for tracking approval times)
+ALTER TABLE public.delivery_queue ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP WITH TIME ZONE;
