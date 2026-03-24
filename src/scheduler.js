@@ -46,91 +46,101 @@ function initScheduler(sock) {
     }, 5000);
 
     const syncJobs = async () => {
-        const schedules = await getActiveSchedules();
-        const activeIdsFromDb = schedules.map(s => s.id);
+        try {
+            const schedules = await getActiveSchedules();
+            const activeIdsFromDb = schedules.map(s => s.id);
 
-        // 1. Cancel jobs that were paused or deleted from the dashboard
-        for (const id in activeJobs) {
-            if (!activeIdsFromDb.includes(id)) {
-                console.log(`⏸️ Schedule paused/deleted. Canceling job for ID: ${id}`);
-                activeJobs[id].job.cancel();
-                delete activeJobs[id];
-            }
-        }
-
-        // 2. Add new jobs or update existing jobs if their timing/prompt changed
-        schedules.forEach(s => {
-            if (activeJobs[s.id]) {
-                const cached = activeJobs[s.id];
-                // If it hasn't changed, do nothing
-                if (cached.cron === s.time_cron && cached.prompt === s.constraint_prompt) {
-                    return;
+            // 1. Cancel jobs that were paused or deleted from the dashboard
+            for (const id in activeJobs) {
+                if (!activeIdsFromDb.includes(id)) {
+                    console.log(`⏸️ Schedule paused/deleted. Canceling job for ID: ${id}`);
+                    if (activeJobs[id].job) activeJobs[id].job.cancel();
+                    delete activeJobs[id];
                 }
-                // If it changed, cancel the old one
-                console.log(`🔄 Updates detected for ${s.recipient_name}. Reloading job.`);
-                cached.job.cancel();
-            } else {
-                console.log(`✅ Scheduling new job for ${s.recipient_name} at [${s.time_cron}]`);
             }
 
-            // Isolate execution logic so it can be invoked manually or by cron
-            const asyncCallback = async () => {
-                if (s.contact_number === 'Unknown Phone') {
-                    console.error(`⚠️ Cannot execute schedule for ID: ${s.id}. No linked contact found (Unknown Phone). Please re-link via Dashboard.`);
-                    return;
-                }
-                console.log(`⚡ Executing schedule for ${s.recipient_name}...`);
-                try {
-                    const { getContactPersona } = require('./db');
-                    const persona = await getContactPersona(s.contact_number);
-                    const msgText = await generateMessage(s.recipient_name, s.constraint_prompt, persona);
-
-                    if (!msgText) {
-                        console.error(`❌ AI generation failed for ${s.recipient_name}. Skipping send.`);
+            // 2. Add new jobs or update existing jobs if their timing/prompt changed
+            schedules.forEach(s => {
+                const tz = process.env.TZ || 'Asia/Kolkata'; // Default to IST for user
+                
+                if (activeJobs[s.id]) {
+                    const cached = activeJobs[s.id];
+                    // If it hasn't changed, do nothing
+                    if (cached.cron === s.time_cron && cached.prompt === s.constraint_prompt) {
                         return;
                     }
-
-                    if (s.requires_approval) {
-                        // Approval mode: write to queue, don't send yet
-                        const { error: insertErr } = await supabase.from('delivery_queue').insert([{
-                            schedule_id: s.id,
-                            contact_id: s.contact_id,
-                            message_text: msgText,
-                            status: 'draft'
-                        }]);
-
-                        if (insertErr) {
-                            console.error(`❌ DB Queue Error: ${insertErr.message}`);
-                        } else {
-                            console.log(`📋 Message for ${s.recipient_name} queued for approval.`);
-                        }
-                    } else {
-                        // Normal mode: send immediately
-                    const jid = `${s.contact_number}@s.whatsapp.net`;
-                    if (currentSock) {
-                        await currentSock.sendMessage(jid, { text: msgText });
-                        console.log(`📩 AI message successfully sent to ${s.recipient_name}!`);
-                    } else {
-                        console.error('❌ Cannot send message: currentSock is null');
-                    }
+                    // If it changed, cancel the old one
+                    console.log(`🔄 Updates detected for ${s.recipient_name}. Reloading job with [${s.time_cron}] (${tz})`);
+                    if (cached.job) cached.job.cancel();
+                } else {
+                    console.log(`✅ Scheduling new job for ${s.recipient_name} at [${s.time_cron}] (${tz})`);
                 }
-            } catch (e) {
-                 console.error(`❌ Failed to execute AI job for ${s.recipient_name}`, e.message);
-            }
-        };
 
-            // Create or recreate the job
-            const jobInstance = schedule.scheduleJob(s.time_cron, asyncCallback);
+                // Isolate execution logic
+                const asyncCallback = async () => {
+                    if (s.contact_number === 'Unknown Phone') {
+                        console.error(`⚠️ Cannot execute schedule for ID: ${s.id}. No linked contact found.`);
+                        return;
+                    }
+                    
+                    const now = new Date();
+                    const istTime = now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+                    console.log(`\n⚡ EXECUTION TRIGGERED: ${s.recipient_name}`);
+                    console.log(`   Server Time (UTC): ${now.toISOString()}`);
+                    console.log(`   Local Time (IST):  ${istTime}`);
 
-            // Store it in our in-memory cache
-            activeJobs[s.id] = {
-                job: jobInstance,
-                cron: s.time_cron,
-                prompt: s.constraint_prompt,
-                recipient_name: s.recipient_name,
-                invokeJob: asyncCallback
-            };
-        });
+                    try {
+                        const { getContactPersona } = require('./db');
+                        const persona = await getContactPersona(s.contact_number);
+                        const msgText = await generateMessage(s.recipient_name, s.constraint_prompt, persona);
+
+                        if (!msgText) {
+                            console.error(`❌ AI generation failed for ${s.recipient_name}. Skipping send.`);
+                            return;
+                        }
+
+                        if (s.requires_approval) {
+                            const { error: insertErr } = await supabase.from('delivery_queue').insert([{
+                                schedule_id: s.id,
+                                contact_id: s.contact_id,
+                                message_text: msgText,
+                                status: 'draft'
+                            }]);
+
+                            if (insertErr) {
+                                console.error(`❌ DB Queue Error: ${insertErr.message}`);
+                            } else {
+                                console.log(`📋 Message for ${s.recipient_name} queued for approval.`);
+                            }
+                        } else {
+                            const jid = `${s.contact_number}@s.whatsapp.net`;
+                            if (currentSock) {
+                                await currentSock.sendMessage(jid, { text: msgText });
+                                console.log(`📩 AI message successfully sent to ${s.recipient_name}!`);
+                            } else {
+                                console.error('❌ Cannot send message: currentSock is null');
+                            }
+                        }
+                    } catch (e) {
+                         console.error(`❌ Failed to execute AI job for ${s.recipient_name}:`, e.message);
+                    }
+                };
+
+                // Create the job with specific timezone
+                const jobInstance = schedule.scheduleJob({ rule: s.time_cron, tz }, asyncCallback);
+
+                // Store in memory
+                activeJobs[s.id] = {
+                    job: jobInstance,
+                    cron: s.time_cron,
+                    prompt: s.constraint_prompt,
+                    recipient_name: s.recipient_name,
+                    invokeJob: asyncCallback
+                };
+            });
+        } catch (err) {
+            console.error('❌ syncJobs fatal error:', err.message);
+        }
     };
 
     // Run the sync immediately on startup

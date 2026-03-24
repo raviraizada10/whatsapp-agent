@@ -63,11 +63,15 @@ function startWebhookServer() {
     });
     app.server = server;
 
-    // Poll delivery_queue every 10 seconds for approved messages and send them
-    setInterval(async () => {
-        if (!supabase || !globalSock) return;
+    // Poll delivery_queue for approved messages and send them
+    async function pollApprovedQueue() {
+        if (!supabase || !globalSock) {
+            setTimeout(pollApprovedQueue, 10000);
+            return;
+        }
+
         try {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('delivery_queue')
                 .select(`
                     *,
@@ -79,7 +83,10 @@ function startWebhookServer() {
                 .eq('status', 'approved')
                 .order('created_at', { ascending: false });
 
+            if (error) throw error;
+
             if (data && data.length > 0) {
+                console.log(`📋 Found ${data.length} approved messages in queue.`);
                 const seenSchedules = new Set();
                 const MAX_AGE_MS = 60 * 60 * 1000; // 60 minutes
                 const now = new Date();
@@ -88,16 +95,16 @@ function startWebhookServer() {
                     const createdAt = new Date(item.created_at);
                     const ageMs = now - createdAt;
 
-                    // 1. Check for absolute Staleness (60 mins)
+                    // 1. Check for absolute Staleness
                     if (ageMs > MAX_AGE_MS) {
-                        console.log(`⚠️ Skipping STALE message for ${item.recipient_name} (Age: ${Math.round(ageMs/1000/60)}m)`);
+                        console.log(`⚠️ Marking STALE: ${item.id} (Recipient: ${item.contacts?.name || 'Unknown'})`);
                         await supabase.from('delivery_queue').update({ status: 'stale' }).eq('id', item.id);
                         continue;
                     }
 
                     // 2. Check for Deduplication (only latest per schedule)
                     if (seenSchedules.has(item.schedule_id)) {
-                        console.log(`⏩ Skipping SUPERSEDED message for ${item.recipient_name} (Newer message available)`);
+                        console.log(`⏩ Marking SUPERSEDED: ${item.id} (Schedule: ${item.schedule_id} already sent)`);
                         await supabase.from('delivery_queue').update({ status: 'superseded' }).eq('id', item.id);
                         continue;
                     }
@@ -110,24 +117,40 @@ function startWebhookServer() {
                         const recipientName = item.contacts?.name || 'Unknown Contact';
 
                         if (!recipientPhone) {
-                            console.error(`❌ Cannot send approved message for ID: ${item.id}. Linked contact missing.`);
+                            console.error(`❌ Missing phone for queue item ${item.id}`);
                             await supabase.from('delivery_queue').update({ status: 'error' }).eq('id', item.id);
                             continue;
                         }
 
+                        console.log(`📩 Dispatching latest approved message to ${recipientName}...`);
                         const jid = `${recipientPhone}@s.whatsapp.net`;
                         await globalSock.sendMessage(jid, { text: item.message_text });
-                        await supabase.from('delivery_queue').update({ status: 'sent' }).eq('id', item.id);
-                        console.log(`✅ Approved (Latest) message sent to ${recipientName} (${recipientPhone})`);
+                        
+                        // Mark as sent immediately after success
+                        const { error: updErr } = await supabase
+                            .from('delivery_queue')
+                            .update({ status: 'sent', sent_at: new Date().toISOString() })
+                            .eq('id', item.id);
+                        
+                        if (updErr) console.error(`⚠️ Failed to update status to 'sent' for ${item.id}:`, updErr.message);
+                        else console.log(`✅ DISPATCHED and MARKED SENT for ${recipientName}`);
+
                     } catch (sendErr) {
-                        console.error(`❌ Failed to send approved message for ID: ${item.id}:`, sendErr.message);
+                        console.error(`❌ Send failure for ${item.id}:`, sendErr.message);
+                        // Optional: mark as retry or error
                     }
                 }
             }
         } catch (e) {
-            // silently skip poll errors
+            console.error('❌ Webhook poll error:', e.message);
+        } finally {
+            // Self-calling timeout prevents overlapping executions
+            setTimeout(pollApprovedQueue, 10000);
         }
-    }, 10000);
+    }
+
+    // Start the poll loop
+    pollApprovedQueue();
 
     return app;
 }
