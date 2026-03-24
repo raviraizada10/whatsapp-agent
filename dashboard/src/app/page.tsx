@@ -616,7 +616,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
       <div className="flex justify-between items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white">AI Schedules</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Configure automated LLM generation rules.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Configure automated message schedules.</p>
         </div>
         <button onClick={() => setShowAdd(!showAdd)} className="shrink-0 flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 font-medium whitespace-nowrap">
           <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Add Schedule</span><span className="sm:hidden">Add</span>
@@ -658,7 +658,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
             </div>
             
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">AI Personality & Logic</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">AI Message Prompt</p>
               <textarea placeholder="e.g. 'Remind mom to call me, sound caring.'" value={prompt} onChange={e => setPrompt(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-4 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 h-24 resize-none text-sm" />
               <PersonaSuggestions onSelect={(s) => setPrompt(s)} />
             </div>
@@ -714,7 +714,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
                   {editingId === s.id ? (
                     <div className="p-6 space-y-4">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Strategy</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Schedule</h3>
                         <button onClick={() => setEditingId(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><XCircle className="w-5 h-5" /></button>
                       </div>
                       <div className="space-y-4">
@@ -723,7 +723,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
                           <input type="text" value={editCron} onChange={e => setEditCron(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-3 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 w-full font-mono text-xs" />
                         </div>
                         <div>
-                          <label className="text-[10px] text-slate-500 font-black uppercase mb-1.5 block tracking-widest">Logic Constraint</label>
+                          <label className="text-[10px] text-slate-500 font-black uppercase mb-1.5 block tracking-widest">Message Prompt</label>
                           <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-3 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 w-full h-24 resize-none text-sm" />
                         </div>
                         <button disabled={saving} onClick={saveEdit} className="w-full bg-emerald-500 text-black py-3 rounded-xl font-bold hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/20">Update Change</button>
@@ -752,7 +752,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
 
                       <div className="mt-auto p-4 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/5 relative group/prompt">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Constraint</p>
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Prompt</p>
                           <Sparkles className="w-3.5 h-3.5 text-emerald-500/30 group-hover/prompt:text-emerald-500/60 transition-all" />
                         </div>
                         <p className="text-slate-600 dark:text-slate-300 leading-relaxed italic border-l-2 border-emerald-500/30 pl-3 text-[13px] line-clamp-3 group-hover/prompt:line-clamp-none transition-all duration-300">"{s.constraint_prompt}"</p>
