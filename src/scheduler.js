@@ -117,6 +117,19 @@ function initScheduler(sock) {
                             if (currentSock) {
                                 await currentSock.sendMessage(jid, { text: msgText });
                                 console.log(`📩 AI message successfully sent to ${s.recipient_name}!`);
+                                
+                                // NEW: Log to history
+                                try {
+                                    await supabase.from('history').insert([{
+                                        contact_id: s.contact_id,
+                                        schedule_id: s.id,
+                                        content: msgText,
+                                        status: 'sent'
+                                    }]);
+                                    console.log('✅ Logged to history.');
+                                } catch (histErr) {
+                                    console.error('⚠️ Failed to log to history:', histErr.message);
+                                }
                             } else {
                                 console.error('❌ Cannot send message: currentSock is null');
                             }

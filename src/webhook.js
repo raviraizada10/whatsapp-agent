@@ -143,6 +143,19 @@ function startWebhookServer() {
                         const jid = `${recipientPhone}@s.whatsapp.net`;
                         await globalSock.sendMessage(jid, { text: item.message_text });
                         
+                        // NEW: Log to history
+                        try {
+                            await supabase.from('history').insert([{
+                                contact_id: item.contact_id,
+                                schedule_id: item.schedule_id,
+                                content: item.message_text,
+                                status: 'sent'
+                            }]);
+                            console.log('✅ Logged to history.');
+                        } catch (histErr) {
+                            console.error('⚠️ Failed to log to history:', histErr.message);
+                        }
+                        
                         // Mark as sent immediately after success
                         const { error: updErr } = await supabase
                             .from('delivery_queue')

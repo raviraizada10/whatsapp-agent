@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [adminNotifications, setAdminNotifications] = useState(true);
+  const [history, setHistory] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme, setTheme } = useTheme();
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -44,14 +45,16 @@ export default function Dashboard() {
 
   async function fetchData() {
     setLoading(true);
-    const [cRes, sRes, setRes, qRes] = await Promise.all([
+    const [cRes, sRes, setRes, qRes, hRes] = await Promise.all([
       supabase.from('contacts').select('*').order('created_at', { ascending: false }),
       supabase.from('schedules').select('*').order('created_at', { ascending: false }),
       supabase.from('settings').select('*').eq('id', 1).single(),
-      supabase.from('delivery_queue').select('id', { count: 'exact' }).eq('status', 'draft')
+      supabase.from('delivery_queue').select('id', { count: 'exact' }).eq('status', 'draft'),
+      supabase.from('history').select('*, contacts(name, phone)').order('created_at', { ascending: false }).limit(100)
     ]);
     if (cRes.data) setContacts(cRes.data);
     if (sRes.data) setSchedules(sRes.data);
+    if (hRes.data) setHistory(hRes.data);
     if (setRes.data) {
       setAdminNotifications(setRes.data.admin_notifications);
       setQrCode(setRes.data.qr_code);
@@ -83,6 +86,7 @@ export default function Dashboard() {
     { id: 'contacts', label: 'Contacts', icon: Users },
     { id: 'schedules', label: 'Schedules', icon: CalendarClock },
     { id: 'approvals', label: 'Approvals', icon: CheckCircle },
+    { id: 'history', label: 'History', icon: MessageSquare },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -247,6 +251,7 @@ export default function Dashboard() {
                 {activeTab === 'contacts' && <ContactsTab contacts={contacts} onUpdate={fetchData} />}
                 {activeTab === 'schedules' && <SchedulesTab schedules={schedules} contacts={contacts} onUpdate={fetchData} />}
                 {activeTab === 'approvals' && <ApprovalsTab onUpdate={fetchData} />}
+                {activeTab === 'history' && <HistoryTab history={history} contacts={contacts} />}
                 {activeTab === 'settings' && <SettingsTab adminNotifications={adminNotifications} setAdminNotifications={setAdminNotifications} />}
               </motion.div>
             </AnimatePresence>
@@ -258,9 +263,9 @@ export default function Dashboard() {
             {[
               { id: 'overview', icon: LayoutGrid, label: 'Overview' },
               { id: 'schedules', icon: CalendarClock, label: 'Schedules' },
+              { id: 'history', icon: MessageSquare, label: 'History' },
               { id: 'contacts', icon: Users, label: 'Contacts' },
               { id: 'approvals', icon: UserCheck, label: 'Approvals' },
-              { id: 'settings', icon: Settings, label: 'Settings' },
             ].map(item => (
               <button
                 key={item.id}
@@ -993,6 +998,74 @@ function ApprovalsTab({ onUpdate }: { onUpdate?: () => void }) {
                     <XCircle className="w-4 h-4" /> Discard
                   </button>
                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HistoryTab({ history, contacts }: { history: any[], contacts: any[] }) {
+  const [filterContact, setFilterContact] = useState('all');
+
+  const filteredHistory = filterContact === 'all' 
+    ? history 
+    : history.filter((h: any) => h.contact_id === filterContact);
+
+  return (
+    <div className="space-y-8 pb-10">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Message History</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Audit log of all sent messages.</p>
+        </div>
+        <div className="flex items-center gap-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-2 rounded-2xl">
+          <Users className="w-4 h-4 text-slate-400 ml-2" />
+          <select 
+            value={filterContact} 
+            onChange={e => setFilterContact(e.target.value)}
+            className="bg-transparent text-sm font-medium text-slate-700 dark:text-slate-200 outline-none pr-4 cursor-pointer"
+          >
+            <option value="all">All Contacts</option>
+            {contacts.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {filteredHistory.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 gap-3">
+          <MessageSquare className="w-12 h-12 text-slate-300 dark:text-slate-700" />
+          <p className="text-lg font-semibold">No history found.</p>
+          <p className="text-sm">Sent messages will appear here once they are dispatched.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredHistory.map((item: any) => (
+            <div key={item.id} className="p-5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-emerald-500/20 transition-all">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                      <Send className="w-3 h-3 text-emerald-500" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      {item.contacts?.name || 'Unknown'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                      {new Date(item.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed border-l-2 border-slate-200 dark:border-white/10 pl-4 py-1 italic">
+                    "{item.content}"
+                  </p>
+                </div>
+                {item.status === 'sent' && (
+                  <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                )}
               </div>
             </div>
           ))}
