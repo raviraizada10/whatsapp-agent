@@ -548,6 +548,7 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
   const [editCron, setEditCron] = useState('');
   const [editPrompt, setEditPrompt] = useState('');
   const [requiresApproval, setRequiresApproval] = useState(false);
+  const [editRequiresApproval, setEditRequiresApproval] = useState(false);
 
   const handleAdd = async () => {
     if (!recipient || !cron || !prompt) return;
@@ -577,13 +578,15 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
     setEditingId(s.id);
     setEditCron(s.time_cron);
     setEditPrompt(s.constraint_prompt);
+    setEditRequiresApproval(s.requires_approval || false);
   };
 
   const saveEdit = async () => {
     setSaving(true);
     await supabase.from('schedules').update({
       time_cron: editCron,
-      constraint_prompt: editPrompt
+      constraint_prompt: editPrompt,
+      requires_approval: editRequiresApproval
     }).eq('id', editingId);
     setSaving(false);
     setEditingId(null);
@@ -726,6 +729,18 @@ function SchedulesTab({ schedules, contacts, onUpdate }: { schedules: any[], con
                           <label className="text-[10px] text-slate-500 font-black uppercase mb-1.5 block tracking-widest">Message Prompt</label>
                           <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 px-4 py-3 rounded-xl text-slate-900 dark:text-white outline-none focus:border-emerald-500 w-full h-24 resize-none text-sm" />
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditRequiresApproval(r => !r)}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 w-full justify-center ${
+                            editRequiresApproval
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400'
+                              : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <Clock className="w-4 h-4" />
+                          {editRequiresApproval ? '✋ Approval Required' : '⚡ Auto-Send (No Approval)'}
+                        </button>
                         <button disabled={saving} onClick={saveEdit} className="w-full bg-emerald-500 text-black py-3 rounded-xl font-bold hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/20">Update Change</button>
                       </div>
                     </div>
