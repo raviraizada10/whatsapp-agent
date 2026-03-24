@@ -64,7 +64,12 @@ async function connectToWhatsApp() {
             supabase.from('settings').update({ connection_status: 'disconnected' }).eq('id', 1).then(()=>{}).catch(()=>{});
 
             if (lastDisconnect?.error) {
-                console.error('Disconnect Reason:', lastDisconnect.error.message || lastDisconnect.error);
+                const errMsg = lastDisconnect.error.message || lastDisconnect.error;
+                console.error(`Disconnect Reason: ${errMsg}`);
+                if (errMsg.includes('conflict')) {
+                    console.error('🚨 AGENT CONFLICT: Another instance of this bot is running with the same session name.');
+                    console.error('🚨 Please CLOSE all other terminal windows or Render environments to ensure only ONE Jarvis is live.');
+                }
             }
             if(shouldReconnect) {
                 setTimeout(connectToWhatsApp, 3000);

@@ -21,7 +21,24 @@ function startWebhookServer() {
 
     // Health check
     app.get('/health', (req, res) => {
-        res.json({ status: 'ok', activeJobs: Object.keys(globalActiveJobs).length });
+        res.json({
+            status: 'ok',
+            activeJobsCount: Object.keys(globalActiveJobs).length,
+            time: new Date().toISOString()
+        });
+    });
+
+    app.get('/debug', (req, res) => {
+        const jobs = Object.values(globalActiveJobs).map(j => ({
+            recipient: j.recipient_name,
+            cron: j.cron,
+            prompt: j.prompt.substring(0, 50) + '...'
+        }));
+        res.json({
+            loadedSchedules: jobs,
+            activeSockets: globalSock ? 'active' : 'null',
+            serverTime: new Date().toISOString()
+        });
     });
 
     /**
