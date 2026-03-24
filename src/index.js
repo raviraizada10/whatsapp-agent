@@ -123,7 +123,7 @@ async function connectToWhatsApp() {
                     if (events && events.length > 0) {
                         for (const event of events) {
                             const adminJid = `${ADMIN_NUMBER}@s.whatsapp.net`;
-                            const timeStr = new Date(event.start.dateTime || event.start.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            const timeStr = new Date(event.start.dateTime || event.start.date).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute:'2-digit', hour12: true });
                             const msg = `📅 *Reminder:* Your event "${event.summary}" is starting soon at ${timeStr}.`;
                             await sock.sendMessage(adminJid, { text: msg });
                             console.log(`✅ Sent proactive calendar reminder for: ${event.summary}`);

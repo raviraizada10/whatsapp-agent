@@ -103,11 +103,13 @@ function formatEventsForContext(events) {
         const start = event.start.dateTime || event.start.date;
         const startDate = new Date(start);
         
-        let dateStr = format(startDate, 'PPpp'); // e.g., Apr 29, 2023, 5:30 PM
+        const options = { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true };
+        let dateStr = startDate.toLocaleString('en-IN', { ...options, dateStyle: 'medium' });
+        
         if (isToday(startDate)) {
-            dateStr = `Today at ${format(startDate, 'p')}`;
+            dateStr = `Today at ${startDate.toLocaleString('en-IN', options)}`;
         } else if (isTomorrow(startDate)) {
-            dateStr = `Tomorrow at ${format(startDate, 'p')}`;
+            dateStr = `Tomorrow at ${startDate.toLocaleString('en-IN', options)}`;
         }
 
         contextList.push(`- ${event.summary} (${dateStr})`);
